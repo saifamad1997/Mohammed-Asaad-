@@ -71,7 +71,7 @@ export function initAuthGate(supabase) {
       } else if (/password.*(6|short|length)/i.test(message)) {
         feedback.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.';
       } else if (/over_email_send_rate_limit|only request this after/i.test(message)) {
-        const seconds = message.match(/after\\s+(\\d+)\\s+seconds/i)?.[1];
+        const seconds = message.match(/after\s+(\d+)\s+seconds/i)?.[1];
         feedback.textContent = seconds
           ? `تم إرسال طلبات كثيرة. انتظر ${seconds} ثانية ثم حاول مجددًا.`
           : 'تم إرسال طلبات كثيرة. انتظر قليلًا ثم حاول مجددًا.';
