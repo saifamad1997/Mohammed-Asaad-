@@ -397,3 +397,6 @@ tbody tr:hover{background:#f7faff}
 .model-office .legacy-links{margin:0}.model-office .legacy-links a{font-size:9px;color:#91d8d2;border-color:#31565a;padding:8px 10px}
 @media(max-width:900px){.model-office-workspace{grid-template-columns:minmax(0,1fr)}.model-office-stage{grid-column:1;grid-row:1}.model-office-panel{grid-column:1;grid-row:2}.model-viewport-dark{height:440px}}
 @media(max-width:560px){.model-office{padding:10px;border-radius:14px}.model-office-head{align-items:flex-start;flex-direction:column}.model-office-status{align-self:flex-start}.model-office-stage,.model-office-panel{padding:12px}.model-stage-toolbar{flex-direction:column}.model-viewport-dark{height:340px;min-height:290px}.model-stage-footer,.model-reference-links{align-items:flex-start;flex-direction:column}.model-office-workspace{gap:10px}.model-dimension-grid{gap:5px}.model-office-field input,.model-office-field select{padding:9px 7px}}
+
+
+.install-app-btn{white-space:nowrap}.install-app-btn[hidden]{display:none!important}@media(max-width:560px){.top-actions .install-app-btn{font-size:10px;padding:8px 9px}}
