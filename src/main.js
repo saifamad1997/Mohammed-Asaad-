@@ -74,8 +74,17 @@ async function checkBackend() {
     badge.dataset.state = 'ok';
   } catch (error) {
     console.error('Supabase connection check failed:', error);
-    badge.textContent = 'تعذر الاتصال بقاعدة البيانات';
-    badge.dataset.state = 'warn';
+    const message = String(error?.message || '');
+    const isDatabasePermissionError =
+      error?.code === '42501' ||
+      /permission denied for table projects/i.test(message);
+    if (isDatabasePermissionError) {
+      badge.textContent = 'الاتصال بقاعدة البيانات يعمل · يلزم تسجيل الدخول';
+      badge.dataset.state = 'warn';
+    } else {
+      badge.textContent = 'تعذر الاتصال بقاعدة البيانات';
+      badge.dataset.state = 'warn';
+    }
   }
 }
 checkBackend();
