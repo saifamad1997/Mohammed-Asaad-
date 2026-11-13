@@ -24,7 +24,7 @@ app.innerHTML = `
   <main class="main-area">
     <header class="topbar">
       <div><div class="eyebrow">نظام الشركة المتكامل</div><h1 id="pageTitle">لوحة المعلومات</h1></div>
-      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary install-app-btn" id="installApp" type="button" hidden>تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button">تسجيل الخروج</button></div>
+      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button">تسجيل الخروج</button></div>
     </header>
     <div id="pageContent" class="page-content"><div class="loading-card">جارٍ تجهيز مساحة العمل…</div></div>
     <footer class="app-footer">محمد أسعد للتنجيد <span>•</span> جميع الأبعاد الهندسية بالملليمتر ما لم يُذكر غير ذلك</footer>
