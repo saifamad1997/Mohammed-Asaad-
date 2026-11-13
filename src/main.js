@@ -24,7 +24,7 @@ app.innerHTML = `
   <main class="main-area">
     <header class="topbar">
       <div><div class="eyebrow">نظام الشركة المتكامل</div><h1 id="pageTitle">لوحة المعلومات</h1></div>
-      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-quiet" id="signOut" type="button">تسجيل الخروج</button></div>
+      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary install-app-btn" id="installApp" type="button" hidden>تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button">تسجيل الخروج</button></div>
     </header>
     <div id="pageContent" class="page-content"><div class="loading-card">جارٍ تجهيز مساحة العمل…</div></div>
     <footer class="app-footer">محمد أسعد للتنجيد <span>•</span> جميع الأبعاد الهندسية بالملليمتر ما لم يُذكر غير ذلك</footer>
@@ -44,6 +44,31 @@ document.querySelector('#signOut').addEventListener('click', async () => {
   location.reload();
 });
 
+let installPrompt = null;
+const installButton = document.querySelector('#installApp');
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  installPrompt = event;
+  installButton.hidden = false;
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  installButton.hidden = true;
+  installButton.textContent = 'تم تثبيت التطبيق';
+});
+installButton.addEventListener('click', async () => {
+  if (!installPrompt) {
+    alert('لتثبيت البرنامج: افتح قائمة المتصفح ثم اختر «إضافة إلى الشاشة الرئيسية» أو «تثبيت التطبيق».');
+    return;
+  }
+  installPrompt.prompt();
+  await installPrompt.userChoice;
+  installPrompt = null;
+  installButton.hidden = true;
+});
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(error => console.warn('PWA worker:', error)));
+}
 initAuthGate(supabase);
 if (!supabaseConfigured) {
   document.querySelector('#userLabel').textContent = 'إعدادات الربط ناقصة';
