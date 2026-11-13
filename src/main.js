@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { supabase, supabaseConfigured } from './lib/supabase.js';
+import { initAuthGate } from './lib/auth-gate.js';
 import './style.css';
 
 const app = document.querySelector('#app');
@@ -56,6 +57,8 @@ app.innerHTML = `
   </main>
 </div>`;
 
+initAuthGate(supabase);
+
 async function checkBackend() {
   const badge = document.querySelector('#backendStatus');
   if (!supabaseConfigured || !supabase) {
@@ -64,13 +67,16 @@ async function checkBackend() {
     return;
   }
   try {
-    const [{ data: sessionData, error: sessionError }, { error: dbError }] = await Promise.all([
-      supabase.auth.getSession(),
-      supabase.from('projects').select('id').limit(1)
-    ]);
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw sessionError;
+    if (!sessionData.session) {
+      badge.textContent = 'يلزم تسجيل الدخول';
+      badge.dataset.state = 'warn';
+      return;
+    }
+    const { error: dbError } = await supabase.from('projects').select('id').limit(1);
     if (dbError) throw dbError;
-    badge.textContent = sessionData.session ? 'قاعدة البيانات متصلة' : 'قاعدة البيانات متصلة · يلزم تسجيل الدخول';
+    badge.textContent = 'قاعدة البيانات متصلة';
     badge.dataset.state = 'ok';
   } catch (error) {
     console.error('Supabase connection check failed:', error);
@@ -88,6 +94,7 @@ async function checkBackend() {
   }
 }
 checkBackend();
+window.addEventListener('supabase-auth-change', checkBackend);
 
 const host = document.querySelector('#scene');
 const scene = new THREE.Scene();
