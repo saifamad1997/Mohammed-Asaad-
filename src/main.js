@@ -40,8 +40,16 @@ nav.addEventListener('click', e => {
 document.querySelector('.brand').addEventListener('click', e => { e.preventDefault(); navigate('dashboard'); });
 document.querySelector('#signOut').addEventListener('click', async () => {
   if (!supabase) return;
-  await supabase.auth.signOut();
-  location.reload();
+  const button = document.querySelector('#signOut');
+  button.disabled = true;
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+    location.reload();
+  } catch (error) {
+    button.disabled = false;
+    alert(error?.message || 'تعذر تسجيل الخروج. حاول مرة أخرى.');
+  }
 });
 
 let installPrompt = null;
@@ -73,10 +81,14 @@ initAuthGate(supabase);
 if (!supabaseConfigured) {
   document.querySelector('#userLabel').textContent = 'إعدادات الربط ناقصة';
 } else {
-  supabase.auth.getSession().then(({data}) => {
+  supabase.auth.getSession().then(({data,error}) => {
+    if (error) throw error;
     currentUser = data?.session?.user || null;
     updateUser();
     if (currentUser) navigate(currentPage);
+  }).catch(error => {
+    updateUser();
+    showError(error);
   });
   supabase.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user || null;
@@ -374,14 +386,22 @@ function renderStudio() {
   initStudio();
 }
 async function initStudio() {
-  const [THREE, controlsModule] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js')]);
+  let THREE, controlsModule;
+  const host = document.querySelector('#modelViewport');
+  try {
+    [THREE, controlsModule] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js')]);
+  } catch (error) {
+    if (host) host.innerHTML = '<div class="scene-fallback">تعذّر تحميل مكتبة العرض ثلاثي الأبعاد. تحقق من الاتصال ثم أعد فتح المكتب.</div>';
+    console.error(error);
+    return;
+  }
   const { OrbitControls } = controlsModule;
   const projectSelect=document.querySelector('#saveProject');
   try {
     const projects=await rows('projects','id,project_no,title');
     projectSelect.innerHTML='<option value="">اختر مشروعاً…</option>'+projects.map(p=>`<option value="${p.id}">#${p.project_no} — ${esc(p.title)}</option>`).join('');
   } catch(e) { projectSelect.innerHTML='<option value="">تعذر تحميل المشاريع</option>'; }
-  const host=document.querySelector('#modelViewport');
+  if (!host || !host.isConnected) return;
   const scene=new THREE.Scene(); scene.background=new THREE.Color('#14232c');
   const camera=new THREE.PerspectiveCamera(38,1,.1,100); camera.position.set(3.9,2.65,4.8);
   let renderer,controls,raf=0,parts=[],separated=false;
@@ -435,12 +455,47 @@ async function initStudio() {
     document.querySelector('#explodeModel').onclick=()=>{if(separated)return;parts.forEach((p,i)=>{p.position.y+=.12+(i%3)*.08;p.position.x+=(i%2?1:-1)*.12;});separated=true;request();};
     document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>p.position.copy(p.userData.base));separated=false;request();};
     document.querySelector('#saveModel').onclick=async()=>{
-      const projectId=projectSelect.value;if(!projectId){alert('اختر المشروع أولاً');return;}
-      const design={name:document.querySelector('#modelName').value,type:document.querySelector('#modelType').value,dimensions_mm:{width:clamp('dimW',100,5000),depth:clamp('dimD',100,3000),height:clamp('dimH',100,3000)},fabric_color:document.querySelector('#modelColor').value,parts:parts.map(p=>({name:p.userData.partName,position:p.userData.base.toArray()})),status:'concept_not_for_manufacturing'};
-      const {data:project,error:readError}=await supabase.from('projects').select('design_data').eq('id',projectId).single();if(readError){alert(readError.message);return;}
-      const {error}=await supabase.from('projects').update({design_data:{...(project.design_data||{}),furniture_model:design}}).eq('id',projectId);if(error)alert(error.message);else alert('تم حفظ بيانات التصميم على المشروع.');
+      const button=document.querySelector('#saveModel');
+      const projectId=projectSelect.value;
+      if(!projectId){alert('اختر المشروع أولاً');return;}
+      button.disabled=true;
+      const design={
+        name:document.querySelector('#modelName').value.trim()||'تصميم جديد',
+        type:document.querySelector('#modelType').value,
+        dimensions_mm:{width:clamp('dimW',100,5000),depth:clamp('dimD',100,3000),height:clamp('dimH',100,3000)},
+        fabric_color:document.querySelector('#modelColor').value,
+        parts:parts.map(p=>({name:p.userData.partName,position:p.userData.base.toArray()})),
+        status:'concept_not_for_manufacturing'
+      };
+      try {
+        const {data:project,error:readError}=await supabase.from('projects').select('design_data').eq('id',projectId).eq('owner_id',currentUser.id).single();
+        if(readError) throw readError;
+        const {error}=await supabase.from('projects').update({design_data:{...(project.design_data||{}),furniture_model:design}}).eq('id',projectId).eq('owner_id',currentUser.id);
+        if(error) throw error;
+        alert('تم حفظ بيانات التصميم على المشروع.');
+      } catch(error) {
+        alert(error?.message||'تعذر حفظ التصميم. حاول مرة أخرى.');
+      } finally {
+        button.disabled=false;
+      }
     };
     build();resize();
-    sceneCleanup=()=>{observer.disconnect();cancelAnimationFrame(raf);controls.dispose();renderer.dispose();renderer.domElement.remove();};
+    sceneCleanup=()=>{
+      observer.disconnect();
+      cancelAnimationFrame(raf);
+      controls.dispose();
+      scene.traverse(object=>{
+        if(object.geometry) object.geometry.dispose();
+        if(object.material){
+          const materials=Array.isArray(object.material)?object.material:[object.material];
+          materials.forEach(material=>{
+            Object.values(material).forEach(value=>{if(value?.isTexture)value.dispose();});
+            material.dispose();
+          });
+        }
+      });
+      renderer.dispose();
+      renderer.domElement.remove();
+    };
   } catch(error) {host.innerHTML='<div class="scene-fallback">تعذّر تشغيل العرض ثلاثي الأبعاد. تأكد من دعم WebGL في المتصفح.</div>';console.error(error);}
 }
