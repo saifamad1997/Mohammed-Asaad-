@@ -1,5 +1,3 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { supabase, supabaseConfigured } from './lib/supabase.js';
 import { initAuthGate } from './lib/auth-gate.js';
 import './style.css';
@@ -285,6 +283,8 @@ function renderStudio() {
   initStudio();
 }
 async function initStudio() {
+  const [THREE, controlsModule] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js')]);
+  const { OrbitControls } = controlsModule;
   const projectSelect=document.querySelector('#saveProject');
   try {
     const projects=await rows('projects','id,project_no,title');
