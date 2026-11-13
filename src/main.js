@@ -239,9 +239,61 @@ async function renderSurveys() {
     ],d=>insertRow('room_surveys',{...d,length_cm:d.length_cm?Number(d.length_cm):null,width_cm:d.width_cm?Number(d.width_cm):null,height_cm:d.height_cm?Number(d.height_cm):null}));
   } catch(error){showError(error);}
 }
-function renderProduction() {
-  setContent('متابعة الإنتاج',`<section class="section-card"><div class="section-heading"><div><h2>مراحل الإنتاج</h2><p>عرض أوامر التصنيع حسب حالتها ومتابعة الإنجاز</p></div><button class="btn" data-open-orders>فتح أوامر التصنيع</button></div><div class="empty-state"><h3>مركز متابعة الإنتاج</h3><p>أوامر العمل محفوظة في قسم التصنيع. سيتم إضافة مراحل التشغيل، نسب الإنجاز، فحص الجودة وتواريخ التسليم في المرحلة التالية.</p></div></section>`);
-  document.querySelector('[data-open-orders]').onclick=()=>navigate('orders');
+async function renderProduction() {
+  try {
+    const [orders, projects] = await Promise.all([
+      rows('work_orders','id,order_no,project_id,department,status,instructions,created_at'),
+      rows('projects','id,title,project_no')
+    ]);
+    const projectMap = new Map(projects.map(p => [p.id, p]));
+    const departments = {carpentry:'نجارة',metalwork:'حدادة',upholstery:'تنجيد',general:'عام'};
+    const statuses = {pending:'بانتظار البدء',in_progress:'قيد التنفيذ',blocked:'متوقف',completed:'مكتمل',cancelled:'ملغي'};
+    const counts = Object.fromEntries(Object.keys(statuses).map(key => [key, orders.filter(o => o.status === key).length]));
+    setContent('متابعة الإنتاج',`
+      <section class="stats-grid">
+        ${statCard('بانتظار البدء',counts.pending,'أوامر لم يبدأ تنفيذها')}
+        ${statCard('قيد التنفيذ',counts.in_progress,'أوامر داخل الورشة')}
+        ${statCard('متوقفة',counts.blocked,'تحتاج معالجة')}
+        ${statCard('مكتملة',counts.completed,'أنهت مرحلة التصنيع')}
+      </section>
+      <section class="section-card">
+        <div class="section-heading"><div><h2>متابعة أوامر الورشة</h2><p>غيّر حالة كل أمر بعد تحديث العمل الفعلي في الورشة</p></div><button class="btn" data-open-orders>إدارة أوامر التصنيع</button></div>
+        ${tableHtml(['رقم الأمر','المشروع','القسم','التعليمات','الحالة الحالية','تحديث الحالة'],orders.map(o=>{
+          const project=projectMap.get(o.project_id);
+          return `<tr>
+            <td>#${esc(o.order_no)}</td>
+            <td>${esc(project ? '#'+project.project_no+' — '+project.title : 'مشروع غير معروف')}</td>
+            <td>${esc(departments[o.department]||o.department)}</td>
+            <td>${esc(o.instructions||'—')}</td>
+            <td><span class="status-tag">${esc(statuses[o.status]||o.status)}</span></td>
+            <td><div class="inline-status"><select data-order-status="${esc(o.id)}">${Object.entries(statuses).map(([value,label])=>`<option value="${value}" ${o.status===value?'selected':''}>${label}</option>`).join('')}</select><button class="btn btn-small" data-save-order="${esc(o.id)}">حفظ</button></div></td>
+          </tr>`;
+        }).join(''))}
+        ${orders.length ? '' : '<div class="empty-state"><h3>لا توجد أوامر تصنيع بعد</h3><p>أنشئ أمر عمل من قسم أوامر التصنيع ليظهر هنا.</p></div>'}
+      </section>
+      <section class="notice-card"><strong>ملاحظة تشغيلية</strong><p>تحديث الحالة يسجل المرحلة الحالية لأمر العمل. نسب الإنجاز وفحص الجودة وتواريخ التسليم التفصيلية ستكون ضمن توسعة دورة الإنتاج التالية.</p></section>
+    `);
+    document.querySelector('[data-open-orders]').onclick=()=>navigate('orders');
+    document.querySelectorAll('[data-save-order]').forEach(button=>{
+      button.addEventListener('click',async()=>{
+        const id=button.dataset.saveOrder;
+        const select=document.querySelector(`[data-order-status="${id}"]`);
+        const status=select?.value;
+        if(!status || !Object.hasOwn(statuses,status)) return;
+        button.disabled=true;
+        button.textContent='جارٍ الحفظ…';
+        try {
+          const {error}=await supabase.from('work_orders').update({status}).eq('id',id).eq('owner_id',currentUser.id);
+          if(error) throw error;
+          await renderProduction();
+        } catch(error) {
+          button.disabled=false;
+          button.textContent='حفظ';
+          alert(error?.message||'تعذر تحديث حالة أمر العمل');
+        }
+      });
+    });
+  } catch(error) { showError(error); }
 }
 function renderDelivery() {
   setContent('التسليم',`<section class="section-card"><div class="section-heading"><div><h2>التسليم والتركيب</h2><p>تجهيز متابعة تسليم المشاريع للعملاء</p></div></div><div class="empty-state"><h3>سجل التسليم</h3><p>سيتم ربط هذا القسم بالمشاريع المكتملة، مع موعد التسليم، عنوان العميل، محضر الاستلام والملاحظات.</p></div></section>`);
