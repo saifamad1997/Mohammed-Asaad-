@@ -312,25 +312,39 @@ async function renderReports() {
 /* 3D studio: an editable concept model, explicitly not certified manufacturing CAD. */
 function renderStudio() {
   setContent('مكتب التصميم 3D',`
-    <section class="studio-layout">
-      <div class="section-card studio-controls">
-        <div class="section-heading"><div><h2>خصائص النموذج</h2><p>عدّل الأبعاد وشاهد أثرها مباشرة</p></div></div>
-        <div class="form-field"><label>اسم التصميم</label><input id="modelName" value="كنبة تجريبية"></div>
-        <div class="form-field"><label>نوع القطعة</label><select id="modelType"><option value="sofa">كنبة مستقيمة</option><option value="chair">كرسي مفرد</option></select></div>
-        <div class="dimension-grid">
-          <div class="form-field"><label>العرض (مم)</label><input id="dimW" type="number" min="100" max="5000" value="2200"></div>
-          <div class="form-field"><label>العمق (مم)</label><input id="dimD" type="number" min="100" max="3000" value="900"></div>
-          <div class="form-field"><label>الارتفاع (مم)</label><input id="dimH" type="number" min="100" max="3000" value="850"></div>
-        </div>
-        <div class="form-field"><label>لون القماش</label><select id="modelColor"><option value="#71847e">أخضر رمادي</option><option value="#9a806b">بني فاتح</option><option value="#68758b">أزرق رمادي</option><option value="#b5aaa0">بيج</option></select></div>
-        <div class="button-row"><button class="btn btn-primary" id="applyModel">تحديث المجسم</button><button class="btn" id="explodeModel">فصل الأجزاء</button><button class="btn" id="resetModel">إعادة التجميع</button></div>
-        <div class="form-field"><label>حفظ التصميم ضمن مشروع</label><select id="saveProject"><option value="">اختر مشروعاً…</option></select></div>
-        <button class="btn btn-primary btn-wide" id="saveModel">حفظ بيانات التصميم</button>
-        <p class="field-note">الأبعاد في هذا النموذج أولية للمعاينة وليست رسومات تصنيع معتمدة أو قائمة قص.</p>
+    <section class="model-office" dir="rtl">
+      <header class="model-office-head">
+        <div class="model-office-brand"><span class="model-office-mark">MA</span><div><strong>محمد أسعد للتنجيد</strong><small>مكتب الموديل ثلاثي الأبعاد</small></div></div>
+        <div class="model-office-status"><i></i> مساحة التصميم جاهزة</div>
+      </header>
+      <div class="model-office-workspace">
+        <aside class="model-office-panel">
+          <div class="model-panel-title"><span>01 / الخصائص</span><h2>بيانات القطعة</h2><p>تحكم بالأبعاد والخامات وشاهد التغييرات مباشرة</p></div>
+          <div class="model-office-field"><label for="modelName">اسم التصميم</label><input id="modelName" value="كنبة تجريبية"></div>
+          <div class="model-office-field"><label for="modelType">نوع القطعة</label><select id="modelType"><option value="sofa">كنبة مستقيمة</option><option value="chair">كرسي مفرد</option></select></div>
+          <div class="model-office-divider"></div>
+          <div class="model-panel-subtitle">الأبعاد الهندسية <span>MM</span></div>
+          <div class="model-dimension-grid">
+            <div class="model-office-field"><label for="dimW">العرض</label><div class="model-input-unit"><input id="dimW" type="number" min="100" max="5000" value="2200"><span>مم</span></div></div>
+            <div class="model-office-field"><label for="dimD">العمق</label><div class="model-input-unit"><input id="dimD" type="number" min="100" max="3000" value="900"><span>مم</span></div></div>
+            <div class="model-office-field"><label for="dimH">الارتفاع</label><div class="model-input-unit"><input id="dimH" type="number" min="100" max="3000" value="850"><span>مم</span></div></div>
+          </div>
+          <div class="model-office-divider"></div>
+          <div class="model-office-field"><label for="modelColor">لون القماش</label><select id="modelColor"><option value="#71847e">أخضر رمادي</option><option value="#9a806b">بني فاتح</option><option value="#68758b">أزرق رمادي</option><option value="#b5aaa0">بيج</option></select></div>
+          <div class="model-office-actions"><button class="model-action-primary" id="applyModel">⟳ تحديث المجسم</button><div><button id="explodeModel">فصل الأجزاء</button><button id="resetModel">إعادة التجميع</button></div></div>
+          <div class="model-office-divider"></div>
+          <div class="model-office-field"><label for="saveProject">ربط التصميم بمشروع</label><select id="saveProject"><option value="">اختر المشروع…</option></select></div>
+          <button class="model-save-button" id="saveModel">حفظ التصميم في المشروع <span>↙</span></button>
+          <p class="model-office-note">تنبيه: هذا النموذج للمعاينة الأولية، والأبعاد لا تُعتمد للتصنيع قبل مراجعتها هندسياً.</p>
+        </aside>
+        <main class="model-office-stage">
+          <div class="model-stage-toolbar"><div><span class="model-stage-kicker">3D WORKSPACE / LIVE VIEW</span><h2>معاينة النموذج</h2><p>اسحب لتدوير القطعة · استخدم عجلة التكبير للاقتراب</p></div><span class="model-live-pill"><i></i> عرض مباشر</span></div>
+          <div id="modelViewport" class="model-viewport-dark"><div class="model-loading-hint">جارٍ تجهيز مساحة العرض ثلاثية الأبعاد…</div></div>
+          <div class="model-stage-footer"><div class="model-material-legend"><span><i class="legend-frame"></i> الهيكل</span><span><i class="legend-fabric"></i> القماش والوسائد</span><span><i class="legend-metal"></i> الأرجل</span></div><span class="model-unit-label">الوحدات: ملليمتر</span></div>
+        </main>
       </div>
-      <div class="section-card studio-view"><div class="section-heading"><div><h2>المعاينة ثلاثية الأبعاد</h2><p>اسحب للتدوير واستخدم التكبير للاقتراب</p></div><span class="live-tag">معاينة مباشرة</span></div><div id="modelViewport"></div><div class="studio-legend"><span>● الهيكل</span><span>● الوسائد</span><span>● الأرجل</span></div></div>
     </section>
-    <section class="section-card"><h2>مكتبة المراجع القديمة</h2><p class="muted">تم حفظ مكتبات الموديلات والمعرض القديم داخل المستودع كمصادر مرجعية، وسيتم دمجها تدريجياً بعد فحص تراخيص الأصول.</p><div class="legacy-links"><a href="/archive/legacy/library-3d.html" target="_blank" rel="noopener">مكتبة موديلات 3D القديمة ↗</a><a href="/archive/legacy/library-polyhaven.html" target="_blank" rel="noopener">مكتبة Poly Haven ↗</a><a href="/archive/legacy/showroom-2026.html" target="_blank" rel="noopener">معرض الأثاث ↗</a></div></section>
+    <section class="model-reference-links"><div><h3>مكتبة المراجع</h3><p>روابط المكتبات المحفوظة داخل النظام</p></div><div class="legacy-links"><a href="/archive/legacy/library-3d.html" target="_blank" rel="noopener">مكتبة موديلات 3D ↗</a><a href="/library.html" target="_blank" rel="noopener">مكتبة الخامات ↗</a><a href="/archive/legacy/showroom-2026.html" target="_blank" rel="noopener">معرض الأثاث ↗</a></div></section>
   `);
   initStudio();
 }
