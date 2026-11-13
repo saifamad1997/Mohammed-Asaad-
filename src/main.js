@@ -181,7 +181,7 @@ async function renderCustomers() {
 }
 async function renderProjects() {
   try {
-    const [data,customers]=await Promise.all([rows('projects','id,project_no,title,furniture_type,status,estimated_cost,currency,created_at'),rows('customers','id,full_name')]);
+    const [data,customers]=await Promise.all([rows('projects','id,project_no,customer_id,title,furniture_type,status,estimated_cost,currency,created_at'),rows('customers','id,full_name')]);
     const customerMap=new Map(customers.map(c=>[c.id,c.full_name]));
     const statusMap={draft:'مسودة',design:'قيد التصميم',approved:'معتمد',manufacturing:'قيد التصنيع',completed:'مكتمل',cancelled:'ملغي'};
     setContent('المشاريع',`<section class="section-card">${pageToolbar('ملفات المشاريع','اربط كل مشروع بعميله ونوع الأثاث ومرحلة التنفيذ','مشروع جديد')}
@@ -320,7 +320,7 @@ async function initStudio() {
       add('قاعدة الهيكل',0,.18,0,w*.94,.16,d*.88,wood);
       add('وسادة المقعد',0,seatY,0,w*.9,seatH,d*.78,cloth);
       add('مسند الظهر',0,seatY+backH*.47,-d*.38,w*.94,backH,.16,cloth);
-      const armW=isChair?.13:.16;
+      const armW=isChair ? 0.13 : 0.16;
       add('ذراع أيسر',-w*.43,seatY*.48,0,armW,seatY+backH*.2,d*.82,cloth);
       add('ذراع أيمن',w*.43,seatY*.48,0,armW,seatY+backH*.2,d*.82,cloth);
       for(let i=0;i<(isChair?1:3);i++){const x=isChair?0:(i-1)*w*.29;add('وسادة جلوس '+(i+1),x,seatY+.1,.035,w*(isChair?.7:.27),.12,d*.62,foam);}
