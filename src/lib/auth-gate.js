@@ -70,6 +70,15 @@ export function initAuthGate(supabase) {
         feedback.textContent = 'أكد بريدك الإلكتروني أولاً ثم حاول تسجيل الدخول.';
       } else if (/password.*(6|short|length)/i.test(message)) {
         feedback.textContent = 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.';
+      } else if (/over_email_send_rate_limit|only request this after/i.test(message)) {
+        const seconds = message.match(/after\\s+(\\d+)\\s+seconds/i)?.[1];
+        feedback.textContent = seconds
+          ? `تم إرسال طلبات كثيرة. انتظر ${seconds} ثانية ثم حاول مجددًا.`
+          : 'تم إرسال طلبات كثيرة. انتظر قليلًا ثم حاول مجددًا.';
+      } else if (/email link is invalid|one-time token not found/i.test(message)) {
+        feedback.textContent = 'رابط تأكيد البريد منتهي أو استُخدم سابقًا. اطلب رابط تأكيد جديدًا.';
+      } else if (/network|failed to fetch|load failed/i.test(message)) {
+        feedback.textContent = 'تعذر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى.';
       } else {
         feedback.textContent = message || 'تعذر إكمال العملية. حاول مرة أخرى.';
       }
@@ -81,6 +90,9 @@ export function initAuthGate(supabase) {
   supabase.auth.getSession().then(({ data, error }) => {
     gate.hidden = Boolean(data?.session);
     if (error) feedback.textContent = 'تعذر التحقق من جلسة الدخول. حاول تسجيل الدخول.';
+  }).catch(() => {
+    gate.hidden = false;
+    feedback.textContent = 'تعذر الاتصال للتحقق من جلسة الدخول. تحقق من الإنترنت ثم أعد المحاولة.';
   });
 
   supabase.auth.onAuthStateChange((_event, session) => {
