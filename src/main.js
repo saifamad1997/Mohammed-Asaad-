@@ -358,20 +358,28 @@ async function initStudio() {
   } catch(e) { projectSelect.innerHTML='<option value="">تعذر تحميل المشاريع</option>'; }
   const host=document.querySelector('#modelViewport');
   const scene=new THREE.Scene(); scene.background=new THREE.Color('#14232c');
-  const camera=new THREE.PerspectiveCamera(38,1,.1,100); camera.position.set(4.3,3.1,5.2);
+  const camera=new THREE.PerspectiveCamera(38,1,.1,100); camera.position.set(3.9,2.65,4.8);
   let renderer,controls,raf=0,parts=[],separated=false;
   try {
     renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
     renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5)); renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
+    const loadingHint=host.querySelector('.model-loading-hint'); if(loadingHint) loadingHint.remove();
     controls=new OrbitControls(camera,renderer.domElement); controls.enableDamping=true; controls.target.set(0,.55,0);
     const draw=()=>{raf=0;controls.update();renderer.render(scene,camera);};
     const request=()=>{if(!raf)raf=requestAnimationFrame(draw);};
     controls.addEventListener('change',request);
-    scene.add(new THREE.HemisphereLight(0xddeeff,0x27313a,2));
-    const light=new THREE.DirectionalLight(0xffffff,2.3);light.position.set(4,7,5);scene.add(light);
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:'#182a33',roughness:.9}));floor.rotation.x=-Math.PI/2;floor.position.y=-.035;scene.add(floor);
-    const grid=new THREE.GridHelper(10,20,0x35505b,0x263c46);grid.position.y=-.02;scene.add(grid);
+    scene.add(new THREE.HemisphereLight(0xe5f4f4,0x26333a,2.1));
+    const light=new THREE.DirectionalLight(0xfff3df,3.0);light.position.set(4,7,5);light.castShadow=true;
+    light.shadow.mapSize.set(1024,1024);light.shadow.camera.left=-5;light.shadow.camera.right=5;light.shadow.camera.top=5;light.shadow.camera.bottom=-5;scene.add(light);
+    const fillLight=new THREE.PointLight(0x55bdb5,1.0,12);fillLight.position.set(-3,2.5,-2);scene.add(fillLight);
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:'#765b45',roughness:.82}));floor.rotation.x=-Math.PI/2;floor.position.y=-.04;floor.receiveShadow=true;scene.add(floor);
+    const floorLines=new THREE.Group();scene.add(floorLines);
+    const plankMatA=new THREE.MeshStandardMaterial({color:'#8b6a50',roughness:.78}),plankMatB=new THREE.MeshStandardMaterial({color:'#6f513d',roughness:.82});
+    for(let i=-9;i<=9;i++){const plank=new THREE.Mesh(new THREE.BoxGeometry(19.8,.012,.018),i%2?plankMatA:plankMatB);plank.position.set(0,-.027,i*.48);floorLines.add(plank);}
+    const rug=new THREE.Mesh(new THREE.CircleGeometry(2.1,64),new THREE.MeshStandardMaterial({color:'#31454a',roughness:1}));rug.rotation.x=-Math.PI/2;rug.scale.set(1.25,.72,1);rug.position.set(0,-.018,.25);rug.receiveShadow=true;scene.add(rug);
+    const grid=new THREE.GridHelper(10,20,0x45616a,0x30454d);grid.position.y=-.012;grid.material.transparent=true;grid.material.opacity=.16;scene.add(grid);
     const group=new THREE.Group();scene.add(group);
     const resize=()=>{if(!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);request();};
     const observer=new ResizeObserver(resize);observer.observe(host);
@@ -379,9 +387,11 @@ async function initStudio() {
       for(const p of [...group.children]){group.remove(p);p.geometry.dispose();p.material.dispose();}
       parts=[]; const w=clamp('dimW',100,5000)/1000,d=clamp('dimD',100,3000)/1000,h=clamp('dimH',100,3000)/1000;
       const isChair=document.querySelector('#modelType').value==='chair';
-      const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,roughness:.8});
-      const wood=new THREE.MeshStandardMaterial({color:'#4d4035'}),foam=new THREE.MeshStandardMaterial({color:'#b8a48f'}),metal=new THREE.MeshStandardMaterial({color:'#596b76',metalness:.55,roughness:.35});
-      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.userData.base=m.position.clone();m.userData.partName=name;group.add(m);parts.push(m);};
+      const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,roughness:.94});
+      const wood=new THREE.MeshStandardMaterial({color:'#74553f',roughness:.72});
+      const foam=new THREE.MeshStandardMaterial({color:'#c7b5a0',roughness:1});
+      const metal=new THREE.MeshStandardMaterial({color:'#83969b',metalness:.62,roughness:.3});
+      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;m.userData.base=m.position.clone();m.userData.partName=name;group.add(m);parts.push(m);};
       const seatY=Math.max(.28,h*.38),seatH=Math.max(.13,h*.19),backH=Math.max(.3,h*.48);
       add('قاعدة الهيكل',0,.18,0,w*.94,.16,d*.88,wood);
       add('وسادة المقعد',0,seatY,0,w*.9,seatH,d*.78,cloth);
