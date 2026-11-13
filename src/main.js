@@ -187,7 +187,7 @@ async function renderProjects() {
     document.querySelector('[data-action]').onclick=()=>openForm('إنشاء مشروع',[
       {name:'title',label:'اسم المشروع',required:true},{name:'customer_id',label:'العميل',type:'select',options:customers.map(c=>({value:c.id,label:c.full_name}))},
       {name:'furniture_type',label:'نوع الأثاث',placeholder:'كنب، مطبخ، غرفة نوم…'},
-      {name:'status',label:'الحالة',type:'select',options:Object.entries(statusMap).map(([value,label])=>({value,label}))},
+      {name:'status',label:'الحالة',type:'select',required:true,options:Object.entries(statusMap).map(([value,label])=>({value,label}))},
       {name:'estimated_cost',label:'التكلفة التقديرية (د.أ)',type:'number',min:0},{name:'description',label:'وصف المشروع',type:'textarea'}
     ],d=>insertRow('projects',{...d,customer_id:d.customer_id||null,estimated_cost:d.estimated_cost?Number(d.estimated_cost):null}));
   } catch(error){showError(error);}
