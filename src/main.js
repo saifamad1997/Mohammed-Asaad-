@@ -5,6 +5,7 @@ import { mountDrafting2D } from './cad/drafting-2d.js';
 import './cad/drafting-2d.css';
 import { mountManufacturingPreview } from './manufacturing/preview.js';
 import './manufacturing/preview.css';
+import './cad/occt-lab.css';
 
 const app = document.querySelector('#app');
 const navItems = [
