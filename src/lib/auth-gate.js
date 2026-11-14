@@ -3,11 +3,11 @@ export function initAuthGate(supabase) {
   const gate=document.createElement('section'); gate.className='auth-gate'; gate.setAttribute('aria-label','تسجيل الدخول');
   gate.innerHTML=`
   <div class="auth-visual" aria-hidden="true"><div class="auth-visual-grid"></div>
-    <div class="auth-logo-lockup"><div class="auth-logo-orb"><span>MA</span></div><div class="auth-company-name">محمد أسعد</div><div class="auth-company-subtitle">للتنجيد والتصميم الهندسي</div></div>
+    <div class="auth-logo-lockup"><div class="auth-logo-orb"><img src="/logo.svg" alt="شعار محمد أسعد"/></div><div class="auth-company-name">محمد أسعد</div><div class="auth-company-subtitle">للتنجيد والتصميم الهندسي</div></div>
     <div class="auth-visual-copy"><b>نظام الشركة المتكامل</b><span>التصميم الهندسي • الأثاث • التصنيع • إدارة المشاريع</span></div>
   </div>
   <form class="auth-card" id="authForm">
-    <div class="auth-brandline"><div class="auth-brand-lockup"><span class="auth-mark">MA</span><span><b>محمد أسعد</b><small>للتنجيد والتصميم الهندسي</small></span></div></div>
+    <div class="auth-brandline"><div class="auth-brand-lockup"><img class="auth-mark-image" src="/logo.svg" alt="شعار محمد أسعد"/><span><b>محمد أسعد</b><small>للتنجيد والتصميم الهندسي</small></span></div></div>
     <p class="auth-eyebrow">بوابة الشركة</p><h1 id="authTitle">دخول الإدارة</h1><p class="auth-copy" id="authCopy">أدخل بريد الإدارة وكلمة المرور للوصول إلى النظام.</p>
     <div class="auth-methods" role="tablist" aria-label="طريقة الدخول"><button type="button" class="auth-method active" data-method="admin" role="tab" aria-selected="true">دخول الإدارة</button><button type="button" class="auth-method" data-method="google" role="tab" aria-selected="false">Google</button></div>
     <div id="adminLoginFields"><label for="authEmail">البريد الإلكتروني للأدمن</label><input id="authEmail" name="email" type="email" autocomplete="username" required placeholder="admin@example.com"/>
