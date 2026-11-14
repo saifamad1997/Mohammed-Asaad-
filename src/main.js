@@ -7,7 +7,7 @@ const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
   ['studio','مكتب التصميم 3D','◇'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
   ['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
-  ['reports','الحسابات والتقارير','▥']
+  ['reports','الحسابات والتقارير','▥'],['sweet-home-3d','Sweet Home 3D','⌂']
 ];
 let currentPage = 'dashboard';
 let currentUser = null;
@@ -127,7 +127,7 @@ function navigate(page) {
   }
   const routes = {
     dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects,
-    studio: renderStudio, surveys: renderSurveys, materials: renderMaterials,
+    studio: renderStudio, 'sweet-home-3d': renderSweetHome3D, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
   routes[page]();
@@ -450,6 +450,36 @@ async function renderReports() {
       await insertRow('project_finances',{project_id:data.project_id,type:data.type,amount:Number(data.amount),description:data.description||null,paid_at:data.paid_at?new Date(data.paid_at).toISOString():new Date().toISOString()});
     });
   } catch(error){showError(error);}
+}
+
+/* Optional Sweet Home 3D workspace. Kept separate from the native furniture studio. */
+function renderSweetHome3D() {
+  const onlineUrl = 'https://www.sweethome3d.com/SweetHome3DJSOnline.jsp';
+  setContent('Sweet Home 3D', `
+    <section class="section-card" dir="rtl" style="display:grid;gap:16px">
+      <div class="section-heading">
+        <div>
+          <h2>Sweet Home 3D</h2>
+          <p>مساحة اختيارية لتخطيط الغرف وتجربة توزيع الأثاث وعرضه ثنائي وثلاثي الأبعاد.</p>
+        </div>
+        <a class="btn btn-primary" href="${onlineUrl}" target="_blank" rel="noopener noreferrer">فتح البرنامج بنافذة مستقلة ↗</a>
+      </div>
+      <div style="overflow:hidden;border:1px solid #e1e9e3;border-radius:16px;background:#f7faf8">
+        <iframe
+          title="Sweet Home 3D Online"
+          src="${onlineUrl}"
+          loading="lazy"
+          allow="fullscreen; clipboard-read; clipboard-write"
+          referrerpolicy="strict-origin-when-cross-origin"
+          style="display:block;width:100%;height:78vh;min-height:620px;border:0;background:#fff"
+        ></iframe>
+      </div>
+      <div class="notice-card">
+        <strong>ملاحظة مهمة</strong>
+        <p>هذه أداة خارجية مستقلة وليست جزءاً من حفظ مشاريع محمد أسعد. قد تحتاج إلى التسجيل في Sweet Home 3D لحفظ تصاميمك على خدمتهم. إذا لم يظهر البرنامج داخل الصفحة بسبب قيود المتصفح، استخدم زر «فتح البرنامج بنافذة مستقلة» أعلاه.</p>
+      </div>
+    </section>
+  `);
 }
 
 /* 3D studio: an editable concept model, explicitly not certified manufacturing CAD. */
