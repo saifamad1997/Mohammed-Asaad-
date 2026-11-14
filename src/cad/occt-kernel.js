@@ -145,7 +145,7 @@ export async function createSofaAssemblyPreview({ width = 2200, depth = 900, hei
     new oc.Message_ProgressRange_1()
   );
   const bytes = oc.FS.readFile(filePath, { encoding: 'binary' });
-  const blob = new Blob([bytes.buffer], { type: 'model/gltf-binary' });
+  const blob = new Blob([bytes], { type: 'model/gltf-binary' });
   oc.FS.unlink(filePath);
   return {
     url: URL.createObjectURL(blob),
