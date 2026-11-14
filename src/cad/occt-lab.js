@@ -33,6 +33,21 @@ export function mountCadKernelLab() {
           <label>عدد المقاعد<select id="cadSofaSeats"><option value="2">مقعدين</option><option value="3" selected>3 مقاعد</option><option value="4">4 مقاعد</option></select></label>
           <button type="button" id="cadSofaBuild" class="cad-kernel-build">إنشاء الكنبة بالمحرك الهندسي</button>
         </div>
+        <section class="cad-fabric-library" aria-label="مكتبة عينات الأقمشة والجلود">
+          <div class="cad-fabric-head"><div><b>مكتبة عينات التنجيد</b><span>اختر نوع الخامة ثم اللون لتطبيقه على وسائد الكنبة في المعاينة</span></div><span id="cadFabricCount">60 عينة مبدئية</span></div>
+          <div class="cad-fabric-families" id="cadFabricFamilies">
+            <button type="button" class="is-active" data-family="chenille">شانيل</button>
+            <button type="button" data-family="linen">كتان</button>
+            <button type="button" data-family="velvet">مخمل</button>
+            <button type="button" data-family="leather">جلد</button>
+            <button type="button" data-family="synthetic">جلد صناعي</button>
+            <button type="button" data-family="suede">شمواه</button>
+            <button type="button" data-family="jacquard">جاكار</button>
+            <button type="button" data-family="cotton">قطن</button>
+          </div>
+          <div class="cad-fabric-grid" id="cadFabricGrid"></div>
+          <div class="cad-fabric-selected" id="cadFabricSelected">العينة الافتراضية: شانيل — رمادي حجري</div>
+        </section>
         <div class="cad-sofa-parts" id="cadSofaParts"><span>بعد الإنشاء ستظهر هنا قائمة القطع المستقلة وأبعاد كل قطعة.</span></div>
       </div>
       <div class="cad-kernel-layout">
@@ -149,6 +164,89 @@ export function mountCadKernelLab() {
   };
 
   let viewerPromise;
+  const fabricFamilies = {
+    chenille: { label: 'شانيل', texture: 'woven', samples: [['عاجي دافئ','#e8dfcf'],['كريمي','#d9cbb5'],['بيج رملي','#c7b397'],['جملي','#aa8663'],['بني موكا','#715747'],['رمادي فاتح','#b9bdba'],['رمادي حجري','#818985'],['فحمي','#41494a'],['أسود','#252729'],['أزرق بترولي','#315d68'],['كحلي','#293b55'],['أخضر زيتوني','#68735a'],['أخضر زمردي','#31594a'],['وردي غباري','#b98483'],['عنابي','#713e49'],['خردلي','#b08a3e']] },
+    linen: { label: 'كتان', texture: 'linen', samples: [['أبيض طبيعي','#eee9dd'],['عاجي','#ded4c1'],['بيج فاتح','#d2c2a8'],['بيج داكن','#ae9a7d'],['رمادي لؤلؤي','#c5c6c0'],['رمادي متوسط','#929792'],['رمادي داكن','#555b59'],['بني ترابي','#806b57'],['أزرق سماوي','#91aeb7'],['أزرق رمادي','#647e89'],['أخضر مريمي','#9aa58b'],['زيتي','#68745d'],['طوبي','#a55e4c'],['وردي باهت','#d0a7a0'],['أسود','#292c2b'],['كحلي','#35465b']] },
+    velvet: { label: 'مخمل', texture: 'velvet', samples: [['أبيض لؤلؤي','#e7e1d8'],['شامبين','#cbb99b'],['بيج كراميل','#b58d68'],['بني شوكولا','#50382f'],['رمادي فضي','#b4b6b7'],['رصاصي','#62696d'],['أسود عميق','#202326'],['أزرق ملكي','#315b91'],['كحلي ليلي','#202f4d'],['تركواز','#397f80'],['أخضر غامق','#285443'],['زمردي','#17644e'],['خمري','#713548'],['أحمر ياقوتي','#8e343e'],['وردي غباري','#b77e88'],['بنفسجي','#64516f']] },
+    leather: { label: 'جلد طبيعي', texture: 'leather', samples: [['عاجي','#e5d9c5'],['بيج طبيعي','#c9ad88'],['كونياك','#a9653d'],['عسلي','#9a633b'],['بني جوزي','#684733'],['بني داكن','#3d2b23'],['أسود','#202020'],['رمادي فاتح','#aaa9a2'],['رمادي فحمي','#45494a'],['أحمر نبيذي','#642f35'],['أخضر غامق','#344c40'],['أزرق داكن','#2c4054']] },
+    synthetic: { label: 'جلد صناعي', texture: 'leather', samples: [['أبيض','#f0eee8'],['كريمي','#e0d5c2'],['بيج','#c6ad8f'],['جملي','#a77a53'],['بني','#684a36'],['أسود','#242526'],['رمادي فاتح','#b8b9b5'],['رمادي غامق','#565b5c'],['أحمر','#8c3439'],['أزرق','#345a78'],['أخضر','#46604c'],['عنابي','#63333d']] },
+    suede: { label: 'شمواه', texture: 'suede', samples: [['عاجي','#e4dac9'],['رملي','#c8b394'],['جملي','#aa805a'],['بني','#74543d'],['موكا','#594437'],['رمادي فاتح','#b6b7b1'],['رمادي متوسط','#858984'],['فحمي','#45494a'],['أسود','#252626'],['أزرق دخاني','#5d7480'],['أخضر مريمي','#8a987e'],['وردي ترابي','#b58d86']] },
+    jacquard: { label: 'جاكار', texture: 'jacquard', samples: [['عاجي منقوش','#e8dfcf'],['بيج منقوش','#cbb99f'],['ذهبي هادئ','#b59a69'],['بني كلاسيكي','#80664f'],['رمادي فضي','#b7b8b3'],['رصاصي','#686d6c'],['أزرق ملكي','#405b80'],['كحلي','#2c3b54'],['أخضر زيتوني','#697256'],['خمري','#713d48'],['وردي معتق','#b78d91'],['أسود منقوش','#303132']] },
+    cotton: { label: 'قطن', texture: 'woven', samples: [['أبيض ناصع','#f1f0e9'],['أوف وايت','#e6e0d4'],['بيج','#d0c0a7'],['رمادي فاتح','#c2c5c1'],['رمادي','#8e9693'],['فحمي','#4d5554'],['أسود','#252729'],['أزرق فاتح','#a0b9c6'],['أزرق','#547b9a'],['كحلي','#33465e'],['أخضر فاتح','#a7b39c'],['أخضر غامق','#4b6653'],['أصفر خردلي','#c3a14f'],['وردي','#d1a5a5'],['أحمر','#a94b4d'],['بني','#80614b']] }
+  };
+  let selectedFabric = { family: 'chenille', name: 'رمادي حجري', color: '#818985' };
+  const fabricGrid = overlay.querySelector('#cadFabricGrid');
+  const renderFabricSamples = familyKey => {
+    const family = fabricFamilies[familyKey] || fabricFamilies.chenille;
+    overlay.querySelectorAll('#cadFabricFamilies button').forEach(button => button.classList.toggle('is-active', button.dataset.family === familyKey));
+    fabricGrid.innerHTML = family.samples.map(([name,color], index) =>
+      '<button type="button" class="cad-fabric-swatch' + (selectedFabric.family === familyKey && selectedFabric.name === name ? ' is-selected' : '') + '" data-family="' + familyKey + '" data-name="' + name + '" data-color="' + color + '" aria-label="' + family.label + ' ' + name + '">' +
+      '<span class="cad-fabric-chip cad-texture-' + family.texture + '" style="--swatch:' + color + '"></span><b>' + name + '</b><small>' + family.label + ' · ' + String(index + 1).padStart(2,'0') + '</small></button>'
+    ).join('');
+    overlay.querySelector('#cadFabricCount').textContent = family.samples.length + ' عينة في ' + family.label;
+  };
+  const makeFabricTexture = (THREE, familyKey, color) => {
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect(0,0,256,256);
+    const family = fabricFamilies[familyKey];
+    if (family.texture === 'woven' || family.texture === 'linen' || family.texture === 'jacquard') {
+      for (let i=0;i<256;i+=4) {
+        ctx.fillStyle = i % 8 ? 'rgba(255,255,255,.10)' : 'rgba(30,30,30,.09)';
+        ctx.fillRect(i,0,1,256);
+        ctx.fillRect(0,i,256,1);
+      }
+      if (family.texture === 'jacquard') {
+        ctx.strokeStyle='rgba(255,255,255,.13)'; ctx.lineWidth=2;
+        for(let y=12;y<256;y+=32){ctx.beginPath();ctx.moveTo(0,y);for(let x=0;x<=256;x+=16)ctx.lineTo(x,y+Math.sin(x/12)*5);ctx.stroke();}
+      }
+    } else if (family.texture === 'velvet' || family.texture === 'suede') {
+      const gradient=ctx.createLinearGradient(0,0,256,220);
+      gradient.addColorStop(0,'rgba(255,255,255,.20)');gradient.addColorStop(.48,'rgba(255,255,255,.02)');gradient.addColorStop(1,'rgba(0,0,0,.22)');
+      ctx.fillStyle=gradient;ctx.fillRect(0,0,256,256);
+      for(let i=0;i<1800;i++){const x=Math.random()*256,y=Math.random()*256;ctx.fillStyle=Math.random()>.5?'rgba(255,255,255,.035)':'rgba(0,0,0,.035)';ctx.fillRect(x,y,1,3);}
+    } else if (family.texture === 'leather') {
+      for(let i=0;i<1800;i++){const x=Math.random()*256,y=Math.random()*256,r=Math.random()*1.5+.3;ctx.fillStyle=Math.random()>.5?'rgba(255,255,255,.12)':'rgba(0,0,0,.12)';ctx.beginPath();ctx.ellipse(x,y,r*1.5,r,Math.random(),0,Math.PI*2);ctx.fill();}
+      const shine=ctx.createLinearGradient(0,0,256,256);shine.addColorStop(0,'rgba(255,255,255,.12)');shine.addColorStop(.5,'rgba(255,255,255,0)');shine.addColorStop(1,'rgba(0,0,0,.12)');ctx.fillStyle=shine;ctx.fillRect(0,0,256,256);
+    }
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(2,2);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 8;
+    return texture;
+  };
+  const applyFabricToModel = () => {
+    if (!model || !window.THREE) return;
+    const family = fabricFamilies[selectedFabric.family];
+    const THREE = viewerPromise && window.__cadThree;
+    if (!THREE) return;
+    model.traverse(item => {
+      if (!item.isMesh || !item.userData.isUpholstery) return;
+      const texture = makeFabricTexture(THREE, selectedFabric.family, selectedFabric.color);
+      item.material.map?.dispose?.();
+      item.material.map = texture;
+      item.material.color.set('#ffffff');
+      item.material.roughness = family.texture === 'leather' ? 0.42 : family.texture === 'velvet' ? 0.88 : 0.82;
+      item.material.metalness = 0;
+      item.material.needsUpdate = true;
+    });
+    overlay.querySelector('#cadFabricSelected').textContent = 'العينة المختارة: ' + family.label + ' — ' + selectedFabric.name + ' (' + selectedFabric.color + ')';
+  };
+  overlay.querySelector('#cadFabricFamilies').addEventListener('click', event => {
+    const button = event.target.closest('button[data-family]');
+    if (button) renderFabricSamples(button.dataset.family);
+  });
+  fabricGrid.addEventListener('click', event => {
+    const button = event.target.closest('button[data-color]');
+    if (!button) return;
+    selectedFabric = { family: button.dataset.family, name: button.dataset.name, color: button.dataset.color };
+    renderFabricSamples(selectedFabric.family);
+    applyFabricToModel();
+  });
+  renderFabricSamples('chenille');
   buildButton.addEventListener('click', async () => {
     buildButton.disabled = true;
     try {
@@ -320,11 +418,12 @@ export function mountCadKernelLab() {
       setStatus('تم بناء قطع الكنبة الصلبة. جارٍ تحميل التجميعة ثلاثية الأبعاد…');
       const gltf = await viewer.load(result.url);
       model = gltf.scene;
-      const palette = { wood: 0x805b3f, foam: 0xd7c7a5, fabric: 0x718b91, metal: 0x34434d };
+      const palette = { wood: 0x805b3f, foam: 0xd7c7a5, fabric: 0xffffff, metal: 0x34434d };
       let meshIndex = 0;
       model.traverse(item => {
         if (!item.isMesh) return;
         const part = result.parts[Math.min(meshIndex, result.parts.length - 1)];
+        item.userData.isUpholstery = part?.category === 'fabric' || part?.category === 'foam';
         item.material = new viewer.THREE.MeshStandardMaterial({
           color: palette[part?.category] || 0x82939a,
           roughness: part?.category === 'metal' ? 0.38 : 0.82,
@@ -334,6 +433,8 @@ export function mountCadKernelLab() {
         item.receiveShadow = true;
         meshIndex++;
       });
+      window.__cadThree = viewer.THREE;
+      applyFabricToModel();
       viewer.add(model);
       viewer.fit(model);
       URL.revokeObjectURL(result.url);
