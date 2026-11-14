@@ -18,15 +18,18 @@ let sceneCleanup = null;
 app.innerHTML = `
 <div class="app-shell">
   <aside class="sidebar">
-    <a class="brand" href="#" aria-label="الرئيسية"><span class="brand-mark">MA</span><span><strong>محمد أسعد</strong><small>للتنجيد والتصميم الهندسي</small></span></a>
-    <div class="nav-caption">إدارة الشركة</div>
+    <div class="brand-wrap">
+      <a class="brand" href="#" aria-label="الرئيسية"><span class="brand-mark">MA</span><span><strong>محمد أسعد</strong><small>للتنجيد والتصميم الهندسي</small></span></a>
+      <span class="workspace-badge">WORKSPACE</span>
+    </div>
+    <div class="nav-caption">مساحة العمل</div>
     <nav class="nav" id="mainNav" aria-label="التنقل الرئيسي"></nav>
     <div class="sidebar-foot"><span class="online-dot"></span> مساحة عمل خاصة وآمنة</div>
   </aside>
   <main class="main-area">
     <header class="topbar">
-      <div><div class="eyebrow">نظام الشركة المتكامل</div><h1 id="pageTitle">لوحة المعلومات</h1></div>
-      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary" id="signIn" type="button" hidden>تسجيل الدخول</button><button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button" hidden>تسجيل الخروج</button></div>
+      <div class="page-heading"><div class="eyebrow">محمد أسعد للتنجيد والتصميم</div><h1 id="pageTitle">لوحة المعلومات</h1><p id="pageSubtitle">نظرة سريعة على حركة الشركة والمشاريع الحالية</p></div>
+      <div class="top-actions"><span class="system-status"><i></i> النظام يعمل</span><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary" id="signIn" type="button" hidden>تسجيل الدخول</button><button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button" hidden>تسجيل الخروج</button></div>
     </header>
     <p class="auth-action-feedback" id="authActionFeedback" role="status" aria-live="polite"></p>
     <div id="pageContent" class="page-content"><div class="loading-card">جارٍ تجهيز مساحة العمل…</div></div>
@@ -128,6 +131,21 @@ function money(value) {
 }
 function setContent(title, html) {
   document.querySelector('#pageTitle').textContent = title;
+  const subtitles = {
+    'لوحة المعلومات':'نظرة سريعة على حركة الشركة والمشاريع الحالية',
+    'العملاء':'ملفات العملاء وبيانات التواصل',
+    'المشاريع':'إدارة المشاريع من الفكرة حتى التسليم',
+    'مكتب التصميم 3D':'التصميم البصري والنمذجة',
+    'الرسم الهندسي 2D':'الرسم والأبعاد والطبقات الهندسية',
+    'قياسات المواقع':'رفع القياسات وتوثيق الموقع',
+    'المستودعات والمواد':'المخزون والمواد وتكاليفها',
+    'أوامر التصنيع':'تحويل التصميم إلى أوامر عمل',
+    'متابعة الإنتاج':'متابعة مراحل التصنيع',
+    'التسليم':'جدولة وتسليم الأعمال',
+    'الحسابات والتقارير':'المتابعة المالية والتقارير',
+    'Sweet Home 3D':'مساحة التصميم الداخلي'
+  };
+  document.querySelector('#pageSubtitle').textContent = subtitles[title] || 'إدارة أعمال الشركة من مساحة عمل واحدة';
   document.querySelector('#pageContent').innerHTML = html;
   document.querySelectorAll('.nav-link').forEach(b => {
     const active = b.dataset.page === currentPage;
