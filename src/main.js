@@ -619,7 +619,29 @@ async function initStudio() {
   const officePanel=document.querySelector('.model-office-panel');
   const partsBox=document.createElement('div');
   partsBox.className='model-office-field';
-  partsBox.innerHTML='<label>مكونات القطعة — اختر مكوّناً لتعديله</label><div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div><div id="modelPartEditor" class="model-part-editor"><p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p></div>';
+  partsBox.innerHTML=`
+    <label>إنشاء حر — ابنِ أي شكل من الصفر</label>
+    <div style="display:grid;gap:8px;margin:10px 0">
+      <textarea id="freeShapePrompt" rows="2" placeholder="اكتب وصفاً مثل: صندوق بعرض 800 وارتفاع 500 وعمق 400 مم"></textarea>
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px">
+        <label>العرض مم<input id="freeW" type="number" min="10" value="800"></label>
+        <label>الارتفاع مم<input id="freeH" type="number" min="10" value="500"></label>
+        <label>العمق مم<input id="freeD" type="number" min="10" value="400"></label>
+      </div>
+      <select id="freeShapeType">
+        <option value="box">كتلة / لوح / صندوق</option>
+        <option value="cylinder">أسطوانة / رجل دائرية</option>
+        <option value="sphere">كرة / وسادة دائرية أولية</option>
+      </select>
+      <button type="button" class="model-action-primary" id="addFreeShape">＋ أضف الشكل إلى المجسم</button>
+      <label for="referenceImage3D">إضافة صورة مرجعية داخل مساحة التصميم</label>
+      <input id="referenceImage3D" type="file" accept="image/*">
+      <small>الصورة تظهر كمرجع بصري قابل للتحريك؛ تحويل الصورة تلقائياً إلى مجسم ثلاثي الأبعاد يحتاج محرك توليد 3D مستقل، ولن أعتبر عرض الصورة تحويلاً حقيقياً.</small>
+    </div>
+    <div class="model-office-divider"></div>
+    <label>مكونات القطعة — اختر مكوّناً لتعديله</label>
+    <div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div>
+    <div id="modelPartEditor" class="model-part-editor"><p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p></div>`;
   const dimensionBox=document.createElement('div');
   dimensionBox.className='model-dimension-tools';
   dimensionBox.innerHTML='<button type="button" id="toggleDimensions">إخفاء الأبعاد</button><button type="button" id="loadSavedModel">تحميل تصميم المشروع</button>';
@@ -909,6 +931,51 @@ async function initStudio() {
       }
     };
     build();resize();
+    const refreshPartsList=()=>{
+      const list=document.querySelector('#modelPartsList');
+      if(!list)return;
+      list.innerHTML=parts.map((p,i)=>'<button type="button" class="model-part-choice" data-part-index="'+i+'" aria-pressed="false"><b>'+(i+1)+'</b> '+esc(p.userData.partName||'مكوّن')+'</button>').join('');
+      list.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
+    };
+    const addFreeShape=()=>{
+      const width=Math.max(10,Math.min(5000,Number(document.querySelector('#freeW').value)||800))/1000;
+      const height=Math.max(10,Math.min(3000,Number(document.querySelector('#freeH').value)||500))/1000;
+      const depth=Math.max(10,Math.min(3000,Number(document.querySelector('#freeD').value)||400))/1000;
+      const type=document.querySelector('#freeShapeType').value;
+      const prompt=document.querySelector('#freeShapePrompt').value.trim();
+      const label=prompt||({box:'شكل حر صندوقي',cylinder:'شكل حر أسطواني',sphere:'شكل حر كروي'}[type]);
+      let geometry;
+      if(type==='cylinder') geometry=new THREE.CylinderGeometry(Math.max(width,depth)/2,Math.max(width,depth)/2,height,48);
+      else if(type==='sphere') geometry=new THREE.SphereGeometry(Math.max(width,height,depth)/2,40,28);
+      else geometry=new THREE.BoxGeometry(width,height,depth);
+      const material=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,roughness:.82});
+      const mesh=new THREE.Mesh(geometry,material);
+      mesh.position.set(0,height/2,0);mesh.castShadow=true;mesh.receiveShadow=true;
+      mesh.userData.partName=label.slice(0,90);
+      mesh.userData.base=mesh.position.clone();
+      mesh.userData.baseSize=new THREE.Vector3(width,height,depth);
+      mesh.userData.baseScale=mesh.scale.clone();
+      mesh.userData.partSize=new THREE.Vector3(width,height,depth);
+      mesh.userData.originalEmissive=0;
+      group.add(mesh);parts.push(mesh);
+      refreshPartsList();selectPart(parts.length-1);request();
+    };
+    document.querySelector('#addFreeShape').addEventListener('click',addFreeShape);
+    document.querySelector('#freeShapePrompt').addEventListener('keydown',event=>{
+      if((event.ctrlKey||event.metaKey)&&event.key==='Enter')addFreeShape();
+    });
+    document.querySelector('#referenceImage3D').addEventListener('change',event=>{
+      const file=event.target.files?.[0];if(!file)return;
+      const url=URL.createObjectURL(file);
+      new THREE.TextureLoader().load(url,texture=>{
+        const image=file;
+        const ratio=texture.image.width/Math.max(1,texture.image.height);
+        const plane=new THREE.Mesh(new THREE.PlaneGeometry(Math.min(2.4,1.4*ratio),Math.min(1.8,1.4/ratio)),new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide}));
+        plane.position.set(0,1.25,-1.15);plane.userData.partName='صورة مرجعية: '+image.name.slice(0,55);
+        plane.userData.base=plane.position.clone();plane.userData.baseSize=new THREE.Vector3(1,1,1);plane.userData.baseScale=plane.scale.clone();plane.userData.partSize=new THREE.Vector3(1,1,1);plane.userData.originalEmissive=0;
+        group.add(plane);parts.push(plane);refreshPartsList();selectPart(parts.length-1);request();URL.revokeObjectURL(url);
+      },undefined,()=>{URL.revokeObjectURL(url);alert('تعذر تحميل الصورة المرجعية.');});
+    });
     sceneCleanup=()=>{
       observer.disconnect();
       cancelAnimationFrame(raf);
