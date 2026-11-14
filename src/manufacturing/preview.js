@@ -90,9 +90,11 @@ export function mountManufacturingPreview({parts = [], design = {}} = {}) {
     wrap.innerHTML = `<table class="manufacturing-table"><thead><tr><th>رقم</th><th>اسم القطعة</th><th>التصنيف</th><th>المادة</th><th>X مم</th><th>Y مم</th><th>Z مم</th><th>طول اسمي مم</th><th>مقطع اسمي مم</th><th>الحالة</th></tr></thead><tbody>${shown.map(row=>`<tr><td>${row.id}</td><td>${escapeHtml(row.name)}</td><td>${escapeHtml(row.group)}</td><td>${escapeHtml(row.material)}</td><td>${row.x}</td><td>${row.y}</td><td>${row.z}</td><td>${row.length}</td><td>${row.sectionA} × ${row.sectionB}</td><td><span class="manufacturing-status">${row.cut?'فرز أولي فقط':'مراجعة مطلوبة'}</span></td></tr>`).join('')}</tbody></table>`;
   };
   overlay.querySelectorAll('[data-view]').forEach(button=>button.addEventListener('click',()=>render(button.dataset.view)));
-  overlay.querySelector('.manufacturing-close').addEventListener('click',()=>overlay.remove());
-  overlay.querySelector('.manufacturing-dismiss').addEventListener('click',()=>overlay.remove());
-  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  const closeOnEscape=event=>{if(event.key==='Escape')close();};
+  const close=()=>{overlay.remove();window.removeEventListener('keydown',closeOnEscape);};
+  overlay.querySelector('.manufacturing-close').addEventListener('click',close);
+  overlay.querySelector('.manufacturing-dismiss').addEventListener('click',close);
+  overlay.addEventListener('click',event=>{if(event.target===overlay)close();});
   overlay.querySelectorAll('[data-export]').forEach(button=>button.addEventListener('click',()=>{
     const type=button.dataset.export;
     if(type==='csv'){
@@ -104,7 +106,5 @@ export function mountManufacturingPreview({parts = [], design = {}} = {}) {
     if(type==='print') window.print();
   }));
   render('all');
-  const closeOnEscape=event=>{if(event.key==='Escape'){overlay.remove();window.removeEventListener('keydown',closeOnEscape);}};
   window.addEventListener('keydown',closeOnEscape);
-  overlay.addEventListener('remove',()=>window.removeEventListener('keydown',closeOnEscape),{once:true});
 }
