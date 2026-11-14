@@ -10,7 +10,7 @@ import './cad/occt-lab.css';
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
-  ['studio','مكتب التصميم 3D','◇'],['cad2d','الرسم الهندسي 2D','⌗'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
+  ['studio','المهندس الذكي 3D','◇'],['cad2d','الرسم الهندسي 2D','⌗'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
   ['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥'],['sweet-home-3d','Sweet Home 3D','⌂']
 ];
@@ -165,7 +165,7 @@ function setContent(title, html) {
     'لوحة المعلومات':'نظرة سريعة على حركة الشركة والمشاريع الحالية',
     'العملاء':'ملفات العملاء وبيانات التواصل',
     'المشاريع':'إدارة المشاريع من الفكرة حتى التسليم',
-    'مكتب التصميم 3D':'التصميم البصري والنمذجة',
+    'المهندس الذكي 3D':'التصميم الهندسي الذكي والنمذجة ثلاثية الأبعاد',
     'الرسم الهندسي 2D':'الرسم والأبعاد والطبقات الهندسية',
     'قياسات المواقع':'رفع القياسات وتوثيق الموقع',
     'المستودعات والمواد':'المخزون والمواد وتكاليفها',
@@ -557,7 +557,7 @@ function renderCad2D() {
 
 /* 3D studio: an editable concept model, explicitly not certified manufacturing CAD. */
 function renderStudio() {
-  setContent('مكتب التصميم 3D',`
+  setContent('المهندس الذكي 3D',`
     <section class="model-office" dir="rtl">
       <header class="model-office-head">
         <div class="model-office-brand"><span class="model-office-mark">MA</span><div><strong>محمد أسعد للتنجيد</strong><small>مكتب الموديل ثلاثي الأبعاد</small></div></div>
@@ -591,7 +591,7 @@ function renderStudio() {
           <p class="model-office-note">تنبيه: هذا النموذج للمعاينة الأولية، والأبعاد لا تُعتمد للتصنيع قبل مراجعتها هندسياً.</p>
         </aside>
         <main class="model-office-stage">
-          <div class="model-stage-toolbar"><div><span class="model-stage-kicker">3D WORKSPACE / LIVE VIEW</span><h2>معاينة النموذج</h2><p>اسحب لتدوير القطعة · استخدم عجلة التكبير للاقتراب</p><button type="button" class="model-action-primary" id="previewManufacturing">معاينة ملف التصنيع والقياسات</button><button type="button" class="model-action-secondary" id="launchCadKernelLab">اختبار محرك CAD الهندسي الحقيقي</button></div><span class="model-live-pill"><i></i> عرض مباشر</span></div>
+          <div class="model-stage-toolbar"><div><span class="model-stage-kicker">3D WORKSPACE / LIVE VIEW</span><h2>معاينة النموذج</h2><p>اسحب لتدوير القطعة · استخدم عجلة التكبير للاقتراب</p><button type="button" class="model-action-primary" id="previewManufacturing">معاينة ملف التصنيع والقياسات</button><button type="button" class="model-action-secondary" id="launchCadKernelLab">فتح المهندس الذكي 3D</button></div><span class="model-live-pill"><i></i> عرض مباشر</span></div>
           <div id="modelViewport" class="model-viewport-dark"><div class="model-loading-hint">جارٍ تجهيز مساحة العرض ثلاثية الأبعاد…</div></div>
           <div class="model-stage-footer"><div class="model-material-legend"><span><i class="legend-frame"></i> الهيكل</span><span><i class="legend-fabric"></i> القماش والوسائد</span><span><i class="legend-metal"></i> الأرجل</span></div><span class="model-unit-label">الوحدات: ملليمتر</span></div>
         </main>
@@ -984,7 +984,7 @@ async function initStudio() {
       }
     };
     build();resize();
-    document.querySelector('#launchCadKernelLab')?.addEventListener('click',async()=>{try{const {mountCadKernelLab}=await import('./cad/occt-lab.js');mountCadKernelLab();}catch(error){console.error(error);alert('تعذر فتح مختبر المحرك الهندسي.');}});
+    document.querySelector('#launchCadKernelLab')?.addEventListener('click',async()=>{try{const {mountCadKernelLab}=await import('./cad/occt-lab.js');mountCadKernelLab();}catch(error){console.error(error);alert('تعذر فتح المهندس الذكي 3D.');}});
     document.querySelector('#previewManufacturing')?.addEventListener('click',()=>mountManufacturingPreview({parts,design:{name:document.querySelector('#modelName').value,dimensions_mm:{width:clamp('dimW',100,5000),depth:clamp('dimD',100,3000),height:clamp('dimH',100,3000)},materials:{wood:document.querySelector('#modelWood').value,board:document.querySelector('#modelBoard').value,foam:document.querySelector('#modelFoam').value,fabric:document.querySelector('#modelFabric').value,support:document.querySelector('#modelSupport').value}}}));
     const money=value=>(Number(value)||0).toFixed(2)+' د.أ';
     const recalculateCost=()=>{
