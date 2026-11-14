@@ -884,8 +884,28 @@ async function initStudio() {
     document.querySelector('#applyModel').onclick=build;
     document.querySelector('#modelType').onchange=()=>{const type=document.querySelector('#modelType').value;const chair=type==='chair';document.querySelector('#dimW').value=chair?850:2200;document.querySelector('#dimD').value=type==='corner'?1700:850;document.querySelector('#dimH').value=chair?900:850;document.querySelector('#modelName').value=chair?'كرسي مفرد':type==='corner'?'كنبة زاوية L':'كنبة مستقيمة';build();};
     ['#modelColor','#modelWood','#modelBoard','#modelFoam','#modelFabric','#modelSupport'].forEach(selector=>document.querySelector(selector).onchange=build);
-    document.querySelector('#explodeModel').onclick=()=>{if(separated)return;parts.forEach((p,i)=>{p.position.y+=.12+(i%3)*.08;p.position.x+=(i%2?1:-1)*.12;});separated=true;request();};
-    document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>{p.position.copy(p.userData.base);p.scale.copy(p.userData.baseScale);});separated=false;request();};
+    document.querySelector('#explodeModel').onclick=()=>{
+      if(separated)return;
+      // Lay every component out in a numbered, non-overlapping inspection grid.
+      const columns=3, gap=.16;
+      const maxX=Math.max(.25,...parts.map(p=>(p.userData.partSize||p.userData.baseSize).x));
+      const maxZ=Math.max(.25,...parts.map(p=>(p.userData.partSize||p.userData.baseSize).z));
+      const cellX=maxX+gap,cellZ=maxZ+gap;
+      const rows=Math.ceil(parts.length/columns);
+      parts.forEach((p,i)=>{
+        const col=i%columns,row=Math.floor(i/columns);
+        const size=p.userData.partSize||p.userData.baseSize;
+        const x=(col-(columns-1)/2)*cellX;
+        const z=(row-(rows-1)/2)*cellZ;
+        p.position.set(x,Math.max(.025,size.y/2),z);
+      });
+      separated=true;
+      const list=document.querySelector('#modelPartsList');
+      list?.classList.add('is-exploded');
+      const note=document.createElement('p');note.className='model-explode-note';note.textContent='وضع التفكيك: كل قطعة مع رقمها واسمها ومقاساتها بالسنتيمتر في القائمة. اختر أي قطعة لإظهار تفاصيلها.';list?.prepend(note);
+      request();
+    };
+    document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>{p.position.copy(p.userData.base);p.scale.copy(p.userData.baseScale);});separated=false;document.querySelector('#modelPartsList')?.classList.remove('is-exploded');document.querySelector('.model-explode-note')?.remove();request();};
     const applySavedDesign=design=>{
       if(!design || !design.dimensions_mm) return;
       document.querySelector('#modelName').value=design.name || 'تصميم محفوظ';
@@ -1001,7 +1021,7 @@ async function initStudio() {
     const refreshPartsList=()=>{
       const list=document.querySelector('#modelPartsList');
       if(!list)return;
-      list.innerHTML=parts.map((p,i)=>'<button type="button" class="model-part-choice" data-part-index="'+i+'" aria-pressed="false"><b>'+(i+1)+'</b> '+esc(p.userData.partName||'مكوّن')+'</button>').join('');
+      list.innerHTML='<div class="model-parts-heading">قائمة القطع ومقاساتها — '+parts.length+' مكوّن</div>'+parts.map((p,i)=>{const v=p.userData.partSize||p.userData.baseSize||new THREE.Vector3();const dims='ط '+(v.x*100).toFixed(1)+' × ع '+(v.z*100).toFixed(1)+' × ا '+(v.y*100).toFixed(1)+' سم';return '<button type="button" class="model-part-choice" data-part-index="'+i+'" aria-pressed="false"><b class="part-number">'+String(i+1).padStart(2,'0')+'</b><span class="part-choice-info"><strong>'+esc(p.userData.partName||'مكوّن')+'</strong><small>'+dims+'</small></span></button>';}).join('');
       list.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
     };
     const addFreeShape=()=>{
