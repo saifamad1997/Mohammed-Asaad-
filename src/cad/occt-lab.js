@@ -8,10 +8,10 @@ export function mountCadKernelLab() {
   overlay.innerHTML = `
     <section class="cad-kernel-dialog" dir="rtl" role="dialog" aria-modal="true" aria-labelledby="cadKernelTitle">
       <header class="cad-kernel-head">
-        <div><span class="cad-kernel-kicker">OPEN CASCADE / WEBASSEMBLY</span><h2 id="cadKernelTitle">مختبر المحرك الهندسي الحقيقي</h2><p>اختبار أولي للمحرك الهندسي داخل نظام الشركة</p></div>
+        <div><span class="cad-kernel-kicker">OPEN CASCADE / WEBASSEMBLY</span><h2 id="cadKernelTitle">المهندس الذكي 3D</h2><p>مساحة التصميم الهندسي الذكي داخل نظام الشركة</p></div>
         <button type="button" class="cad-kernel-close" aria-label="إغلاق">×</button>
       </header>
-      <div class="cad-kernel-notice"><strong>اختبار تقني — ليس تصميم أثاث نهائياً</strong><span>يُنشئ المحرك جسماً هندسياً B-Rep بأبعاد مدخلة بالملليمتر، ثم يصدره إلى GLB لعرضه داخل هذه النافذة. هذه الخطوة تثبت ربط النواة، ولا تعني أن مكتبة الأثاث أو ملفات التصنيع اكتملت.</span></div>
+      <div class="cad-kernel-notice"><strong>مرحلة تطوير — لا تعتمد مخرجاتها للتصنيع بعد</strong><span>يُنشئ المحرك جسماً هندسياً B-Rep بأبعاد مدخلة بالملليمتر، ثم يصدره إلى GLB لعرضه داخل هذه النافذة. هذه الخطوة تثبت ربط النواة، ولا تعني أن مكتبة الأثاث أو ملفات التصنيع اكتملت.</span></div>
       <div class="cad-sofa-section">
         <div class="cad-sofa-heading"><div><b>أول نموذج أثاث — كنبة مستقيمة</b><span>تكوين مبدئي من قطع B-Rep مستقلة ينشئها محرك Open CASCADE</span></div><span class="cad-sofa-count">خشب · إسفنج · قماش · أرجل</span></div>
         <div class="cad-sofa-controls">
