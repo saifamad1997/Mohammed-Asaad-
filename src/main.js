@@ -26,8 +26,9 @@ app.innerHTML = `
   <main class="main-area">
     <header class="topbar">
       <div><div class="eyebrow">نظام الشركة المتكامل</div><h1 id="pageTitle">لوحة المعلومات</h1></div>
-      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button">تسجيل الخروج</button></div>
+      <div class="top-actions"><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary" id="signIn" type="button" hidden>تسجيل الدخول</button><button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button" hidden>تسجيل الخروج</button></div>
     </header>
+    <p class="auth-action-feedback" id="authActionFeedback" role="status" aria-live="polite"></p>
     <div id="pageContent" class="page-content"><div class="loading-card">جارٍ تجهيز مساحة العمل…</div></div>
     <footer class="app-footer">محمد أسعد للتنجيد <span>•</span> جميع الأبعاد الهندسية بالملليمتر ما لم يُذكر غير ذلك</footer>
   </main>
@@ -40,17 +41,29 @@ nav.addEventListener('click', e => {
   if (button) navigate(button.dataset.page);
 });
 document.querySelector('.brand').addEventListener('click', e => { e.preventDefault(); navigate('dashboard'); });
+document.querySelector('#signIn').addEventListener('click', () => {
+  window.dispatchEvent(new Event('open-auth-gate'));
+});
 document.querySelector('#signOut').addEventListener('click', async () => {
-  if (!supabase) return;
+  if (!supabase || !currentUser) return;
   const button = document.querySelector('#signOut');
+  const feedback = document.querySelector('#authActionFeedback');
+  const originalLabel = button.textContent;
   button.disabled = true;
+  button.textContent = 'جارٍ تسجيل الخروج…';
+  feedback.textContent = '';
   try {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
-    location.reload();
+    currentUser = null;
+    updateUser();
+    navigate(currentPage);
+    feedback.textContent = 'تم تسجيل الخروج بأمان.';
   } catch (error) {
+    feedback.textContent = error?.message || 'تعذر تسجيل الخروج. حاول مرة أخرى.';
+  } finally {
     button.disabled = false;
-    alert(error?.message || 'تعذر تسجيل الخروج. حاول مرة أخرى.');
+    button.textContent = originalLabel;
   }
 });
 
@@ -81,7 +94,7 @@ if ('serviceWorker' in navigator) {
 }
 initAuthGate(supabase);
 if (!supabaseConfigured) {
-  document.querySelector('#userLabel').textContent = 'إعدادات الربط ناقصة';
+  updateUser();
 } else {
   supabase.auth.getSession().then(({data,error}) => {
     if (error) throw error;
@@ -95,11 +108,16 @@ if (!supabaseConfigured) {
   supabase.auth.onAuthStateChange((_event, session) => {
     currentUser = session?.user || null;
     updateUser();
-    if (currentUser) navigate(currentPage);
+    navigate(currentPage);
   });
 }
 function updateUser() {
-  document.querySelector('#userLabel').textContent = currentUser?.email || 'غير مسجل الدخول';
+  const label = document.querySelector('#userLabel');
+  const signIn = document.querySelector('#signIn');
+  const signOut = document.querySelector('#signOut');
+  label.textContent = currentUser?.email || (supabaseConfigured ? 'زائر — الدخول مطلوب' : 'إعدادات الربط ناقصة');
+  signIn.hidden = Boolean(currentUser) || !supabaseConfigured;
+  signOut.hidden = !currentUser;
 }
 function esc(value='') {
   return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
