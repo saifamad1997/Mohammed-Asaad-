@@ -96,11 +96,13 @@ export function mountCadKernelLab() {
   const setStatus = message => { if (!closed) status.textContent = message; };
   const ensureViewer = async () => {
     if (renderer) return;
-    const [THREE, controlsModule, loaderModule] = await Promise.all([
+    const [THREE, controlsModule, loaderModule, roundedModule] = await Promise.all([
       import('three'),
       import('three/addons/controls/OrbitControls.js'),
-      import('three/addons/loaders/GLTFLoader.js')
+      import('three/addons/loaders/GLTFLoader.js'),
+      import('three/addons/geometries/RoundedBoxGeometry.js')
     ]);
+    const { RoundedBoxGeometry } = roundedModule;
     const { OrbitControls } = controlsModule;
     const { GLTFLoader } = loaderModule;
     const scene = new THREE.Scene();
@@ -430,6 +432,23 @@ export function mountCadKernelLab() {
         if (!item.isMesh) return;
         const part = result.parts[Math.min(meshIndex, result.parts.length - 1)];
         item.userData.isUpholstery = part?.category === 'fabric' || part?.category === 'foam';
+        // Keep OCCT dimensions/solids as the engineering source, but render each
+        // visible component with softened, furniture-like radii instead of sharp toy blocks.
+        item.geometry.computeBoundingBox();
+        const localBounds = item.geometry.boundingBox;
+        const localSize = localBounds.getSize(new viewer.THREE.Vector3());
+        const localCenter = localBounds.getCenter(new viewer.THREE.Vector3());
+        const smallestSide = Math.max(1, Math.min(localSize.x, localSize.y, localSize.z));
+        const cornerRadius = Math.min(
+          part?.category === 'fabric' ? 42 : part?.category === 'foam' ? 58 : 12,
+          smallestSide * 0.42
+        );
+        const softened = new viewer.RoundedBoxGeometry(
+          Math.max(1, localSize.x), Math.max(1, localSize.y), Math.max(1, localSize.z), 6, cornerRadius
+        );
+        item.geometry.dispose();
+        item.geometry = softened;
+        item.position.add(localCenter);
         item.material = new viewer.THREE.MeshStandardMaterial({
           color: palette[part?.category] || 0x82939a,
           roughness: part?.category === 'metal' ? 0.38 : 0.82,
