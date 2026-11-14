@@ -668,7 +668,7 @@ async function initStudio() {
   host.style.position='relative';
   const dimensionOverlay=document.createElement('div');
   dimensionOverlay.className='model-dimension-overlay';
-  dimensionOverlay.innerHTML='<span class="dimension-width"></span><span class="dimension-depth"></span><span class="dimension-height"></span>';
+  dimensionOverlay.innerHTML='<div class="dimension-heading">الأبعاد الحقيقية للمجسم</div><div class="dimension-cards"><span class="dimension-width"></span><span class="dimension-depth"></span><span class="dimension-height"></span></div><small>الأبعاد بالسنتيمتر · الطول × العرض × الارتفاع</small>';
   host.appendChild(dimensionOverlay);
   let dimensionsVisible=true;
   document.querySelector('#toggleDimensions').onclick=()=>{
@@ -704,9 +704,9 @@ async function initStudio() {
       parts=[]; const w=clamp('dimW',100,5000)/1000,d=clamp('dimD',100,3000)/1000,h=clamp('dimH',100,3000)/1000;
       const type=document.querySelector('#modelType').value;
       const isChair=type==='chair',isCorner=type==='corner';
-      dimensionOverlay.querySelector('.dimension-width').textContent='العرض: '+Math.round(w*1000)+' مم';
-      dimensionOverlay.querySelector('.dimension-depth').textContent='العمق: '+Math.round(d*1000)+' مم';
-      dimensionOverlay.querySelector('.dimension-height').textContent='الارتفاع: '+Math.round(h*1000)+' مم';
+      dimensionOverlay.querySelector('.dimension-width').textContent='الطول: '+(w*100).toFixed(1)+' سم';
+      dimensionOverlay.querySelector('.dimension-depth').textContent='العرض: '+(d*100).toFixed(1)+' سم';
+      dimensionOverlay.querySelector('.dimension-height').textContent='الارتفاع: '+(h*100).toFixed(1)+' سم';
       const makeTexture=(kind)=>{
         const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
         const ctx=canvas.getContext('2d');
@@ -843,23 +843,23 @@ async function initStudio() {
       const editor=document.querySelector('#modelPartEditor');
       const pos=part.position, size=part.userData.partSize;
       editor.innerHTML=`<strong>${esc(part.userData.partName)}</strong><div class="model-part-edit-grid">
-        <label>الموضع X <input data-part-value="x" type="number" step="1" value="${Math.round(pos.x*1000)}"></label>
-        <label>الموضع Y <input data-part-value="y" type="number" step="1" value="${Math.round(pos.y*1000)}"></label>
-        <label>الموضع Z <input data-part-value="z" type="number" step="1" value="${Math.round(pos.z*1000)}"></label>
-        <label>العرض X <input data-part-value="sx" type="number" min="10" step="1" value="${Math.max(10,Math.round(size.x*1000))}"></label>
-        <label>الارتفاع Y <input data-part-value="sy" type="number" min="10" step="1" value="${Math.max(10,Math.round(size.y*1000))}"></label>
-        <label>العمق Z <input data-part-value="sz" type="number" min="10" step="1" value="${Math.max(10,Math.round(size.z*1000))}"></label>
-      </div><small>جميع القيم بالملليمتر. التعديلات تخص هذا المكوّن فقط.</small>`;
+        <label>الموضع X (سم) <input data-part-value="x" type="number" step=".1" value="${(pos.x*100).toFixed(1)}"></label>
+        <label>الموضع Y (سم) <input data-part-value="y" type="number" step=".1" value="${(pos.y*100).toFixed(1)}"></label>
+        <label>الموضع Z (سم) <input data-part-value="z" type="number" step=".1" value="${(pos.z*100).toFixed(1)}"></label>
+        <label>الطول X (سم) <input data-part-value="sx" type="number" min=".1" step=".1" value="${Math.max(.1,size.x*100).toFixed(1)}"></label>
+        <label>الارتفاع Y (سم) <input data-part-value="sy" type="number" min=".1" step=".1" value="${Math.max(.1,size.y*100).toFixed(1)}"></label>
+        <label>العرض Z (سم) <input data-part-value="sz" type="number" min=".1" step=".1" value="${Math.max(.1,size.z*100).toFixed(1)}"></label>
+      </div><small>جميع الأبعاد والمواضع بالسنتيمتر. التعديل يخص هذا الجزء فقط ويحدّث المجسم مباشرة.</small>`;
       editor.querySelectorAll('[data-part-value]').forEach(input=>input.addEventListener('change',()=>{
-        const value=Math.max(input.dataset.partValue==='x'||input.dataset.partValue==='y'||input.dataset.partValue==='z'?-5000:10,Math.min(5000,Number(input.value)||0));
+        const value=Math.max(input.dataset.partValue==='x'||input.dataset.partValue==='y'||input.dataset.partValue==='z'?-500:0.1,Math.min(500,Number(input.value)||0));
         input.value=value;
         const key=input.dataset.partValue;
         if(key==='x'||key==='y'||key==='z'){
-          part.position[key==='x'?'x':key==='y'?'y':'z']=value/1000;
+          part.position[key==='x'?'x':key==='y'?'y':'z']=value/100;
           part.userData.base=part.position.clone();
         }else{
           const axis=key==='sx'?'x':key==='sy'?'y':'z';
-          part.userData.partSize[axis]=value/1000;
+          part.userData.partSize[axis]=value/100;
           part.scale[axis]=part.userData.partSize[axis]/part.userData.baseSize[axis];
           part.userData.baseScale=part.scale.clone();
         }
