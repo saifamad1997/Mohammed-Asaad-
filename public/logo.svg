@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#83d8d0"/><stop offset="1" stop-color="#397f91"/></linearGradient></defs>
+<rect width="512" height="512" rx="112" fill="#142638"/>
+<rect x="24" y="24" width="464" height="464" rx="94" fill="none" stroke="#8abec6" stroke-opacity=".35" stroke-width="4"/>
+<path d="M112 338V150q0-20 20-20h42q20 0 20 20v188" fill="none" stroke="url(#g)" stroke-width="30" stroke-linecap="round"/>
+<path d="M194 338V150q0-20 20-20h42q20 0 20 20v188" fill="none" stroke="#eef7f7" stroke-width="25" stroke-linecap="round"/>
+<path d="M282 338V150q0-20 20-20h42q20 0 20 20v188" fill="none" stroke="url(#g)" stroke-width="30" stroke-linecap="round"/>
+<path d="M112 250h252" stroke="#d9eeec" stroke-width="15" stroke-linecap="round" opacity=".9"/>
+<path d="M128 378h256" stroke="#7ac9c2" stroke-width="7" stroke-linecap="round" opacity=".8"/>
+<text x="256" y="445" text-anchor="middle" font-family="Arial,sans-serif" font-size="30" font-weight="700" letter-spacing="5" fill="#f3fbfa">MA</text>
+</svg>
