@@ -938,11 +938,17 @@ async function initStudio() {
       list.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
     };
     const addFreeShape=()=>{
+      const prompt=document.querySelector('#freeShapePrompt').value.trim();
+      const parsed=(prompt.match(/\\d+(?:[.,]\\d+)?/g)||[]).map(value=>Number(value.replace(',','.'))).filter(Number.isFinite);
+      if(parsed[0])document.querySelector('#freeW').value=parsed[0];
+      if(parsed[1])document.querySelector('#freeH').value=parsed[1];
+      if(parsed[2])document.querySelector('#freeD').value=parsed[2];
       const width=Math.max(10,Math.min(5000,Number(document.querySelector('#freeW').value)||800))/1000;
       const height=Math.max(10,Math.min(3000,Number(document.querySelector('#freeH').value)||500))/1000;
       const depth=Math.max(10,Math.min(3000,Number(document.querySelector('#freeD').value)||400))/1000;
-      const type=document.querySelector('#freeShapeType').value;
-      const prompt=document.querySelector('#freeShapePrompt').value.trim();
+      let type=document.querySelector('#freeShapeType').value;
+      if(/اسطوان|دائري|دائرة|رجل دائرية/.test(prompt))type='cylinder';
+      if(/كرة|كروي|كروية/.test(prompt))type='sphere';
       const label=prompt||({box:'شكل حر صندوقي',cylinder:'شكل حر أسطواني',sphere:'شكل حر كروي'}[type]);
       let geometry;
       if(type==='cylinder') geometry=new THREE.CylinderGeometry(Math.max(width,depth)/2,Math.max(width,depth)/2,height,48);
