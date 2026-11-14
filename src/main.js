@@ -332,8 +332,77 @@ async function renderProduction() {
     });
   } catch(error) { showError(error); }
 }
-function renderDelivery() {
-  setContent('التسليم',`<section class="section-card"><div class="section-heading"><div><h2>التسليم والتركيب</h2><p>تجهيز متابعة تسليم المشاريع للعملاء</p></div></div><div class="empty-state"><h3>سجل التسليم</h3><p>سيتم ربط هذا القسم بالمشاريع المكتملة، مع موعد التسليم، عنوان العميل، محضر الاستلام والملاحظات.</p></div></section>`);
+async function renderDelivery() {
+  try {
+    const projects = await rows('projects','id,project_no,customer_id,title,status,estimated_cost,description,design_data,created_at');
+    const customers = await rows('customers','id,full_name,phone,address');
+    const customerMap = new Map(customers.map(c=>[c.id,c]));
+    const deliveryStatus = {ready:'جاهز للتسليم',scheduled:'تم تحديد الموعد',delivered:'تم التسليم',hold:'مؤجل'};
+    const deliveryFrom = project => project.design_data?.delivery || {};
+    const deliveryRows = projects
+      .filter(p => !['cancelled','draft'].includes(p.status))
+      .map(p => {
+        const customer = customerMap.get(p.customer_id);
+        const d = deliveryFrom(p);
+        const status = d.status || (p.status === 'completed' ? 'ready' : 'hold');
+        return `<tr>
+          <td>#${esc(p.project_no)}</td>
+          <td>${esc(p.title)}</td>
+          <td>${esc(customer?.full_name || '—')}</td>
+          <td>${esc(customer?.phone || '—')}</td>
+          <td>${esc(d.date || 'غير محدد')}</td>
+          <td><span class="status-tag">${esc(deliveryStatus[status] || status)}</span></td>
+          <td><button class="btn btn-small" data-delivery-project="${esc(p.id)}">تحديث</button></td>
+        </tr>`;
+      }).join('');
+
+    setContent('التسليم',`
+      <section class="section-card">
+        <div class="section-heading">
+          <div><h2>التسليم والتركيب</h2><p>متابعة المشاريع الجاهزة، موعد التسليم، عنوان العميل ومحضر الاستلام.</p></div>
+          <button class="btn" data-delivery-print>طباعة السجل</button>
+        </div>
+        ${tableHtml(['المشروع','اسم المشروع','العميل','الهاتف','موعد التسليم','الحالة','إجراء'],deliveryRows)}
+      </section>
+      <section class="notice-card">
+        <strong>طريقة العمل</strong>
+        <p>يُحفظ سجل التسليم داخل ملف المشروع نفسه، لذلك لا توجد بيانات منفصلة قد تضيع عن المشروع. حدّث الموعد والحالة من زر «تحديث».</p>
+      </section>
+    `);
+
+    document.querySelector('[data-delivery-print]')?.addEventListener('click',()=>window.print());
+    document.querySelectorAll('[data-delivery-project]').forEach(button=>{
+      button.addEventListener('click',()=>{
+        const project=projects.find(p=>p.id===button.dataset.deliveryProject);
+        if(!project) return;
+        const customer=customerMap.get(project.customer_id);
+        const d=deliveryFrom(project);
+        openForm('تحديث تسليم المشروع',[
+          {name:'status',label:'حالة التسليم',type:'select',required:true,options:Object.entries(deliveryStatus).map(([value,label])=>({value,label}))},
+          {name:'date',label:'موعد التسليم',type:'date'},
+          {name:'address',label:'عنوان التسليم',placeholder:customer?.address||''},
+          {name:'received_by',label:'المستلم'},
+          {name:'notes',label:'ملاحظات ومحضر الاستلام',type:'textarea'}
+        ],async formData=>{
+          const nextDelivery={...d,...formData,updated_at:new Date().toISOString()};
+          const nextDesignData={...(project.design_data||{}),delivery:nextDelivery};
+          const {error}=await supabase.from('projects')
+            .update({design_data:nextDesignData})
+            .eq('id',project.id)
+            .eq('owner_id',currentUser.id);
+          if(error) throw error;
+        });
+        setTimeout(()=>{
+          const form=document.querySelector('.modal-backdrop form');
+          if(!form) return;
+          for(const [key,value] of Object.entries({status:d.status||'ready',date:d.date||'',address:d.address||customer?.address||'',received_by:d.received_by||'',notes:d.notes||''})){
+            const field=form.elements.namedItem(key);
+            if(field) field.value=value;
+          }
+        },0);
+      });
+    });
+  } catch(error) { showError(error); }
 }
 async function renderReports() {
   try {
