@@ -34,7 +34,7 @@ export function mountCadKernelLab() {
           <button type="button" id="cadSofaBuild" class="cad-kernel-build">إنشاء الكنبة بالمحرك الهندسي</button>
         </div>
         <section class="cad-fabric-library" aria-label="مكتبة عينات الأقمشة والجلود">
-          <div class="cad-fabric-head"><div><b>مكتبة عينات التنجيد</b><span>اختر نوع الخامة ثم اللون لتطبيقه على وسائد الكنبة في المعاينة</span></div><span id="cadFabricCount">60 عينة مبدئية</span></div>
+          <div class="cad-fabric-head"><div><b>مكتبة عينات التنجيد</b><span>اختر نوع الخامة ثم اللون لتطبيقه على وسائد الكنبة في المعاينة</span></div><span id="cadFabricCount">112 عينة لونية أولية</span></div>
           <div class="cad-fabric-families" id="cadFabricFamilies">
             <button type="button" class="is-active" data-family="chenille">شانيل</button>
             <button type="button" data-family="linen">كتان</button>
@@ -46,6 +46,7 @@ export function mountCadKernelLab() {
             <button type="button" data-family="cotton">قطن</button>
           </div>
           <div class="cad-fabric-grid" id="cadFabricGrid"></div>
+          <div class="cad-fabric-custom"><label for="cadFabricCustomColor">اختر أي درجة لون بنفسك</label><input type="color" id="cadFabricCustomColor" value="#818985"><span>تطبيق اللون المخصص على خامة العائلة المختارة</span></div>
           <div class="cad-fabric-selected" id="cadFabricSelected">العينة الافتراضية: شانيل — رمادي حجري</div>
         </section>
         <div class="cad-sofa-parts" id="cadSofaParts"><span>بعد الإنشاء ستظهر هنا قائمة القطع المستقلة وأبعاد كل قطعة.</span></div>
@@ -247,6 +248,11 @@ export function mountCadKernelLab() {
     applyFabricToModel();
   });
   renderFabricSamples('chenille');
+  overlay.querySelector('#cadFabricCustomColor').addEventListener('input', event => {
+    selectedFabric = { family: selectedFabric.family, name: 'لون مخصص', color: event.target.value };
+    applyFabricToModel();
+    fabricGrid.querySelectorAll('.cad-fabric-swatch').forEach(button => button.classList.remove('is-selected'));
+  });
   buildButton.addEventListener('click', async () => {
     buildButton.disabled = true;
     try {
