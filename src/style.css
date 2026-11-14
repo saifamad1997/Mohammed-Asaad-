@@ -586,3 +586,54 @@ tbody tr:hover{background:#f8fbfd!important}
  .workflow-grid{gap:7px!important}.workflow-tile{padding:12px!important}
  .auth-card{padding:26px 20px!important;border-radius:21px!important}.auth-card h1{font-size:21px!important}.auth-mark{width:58px!important;height:58px!important}
 }
+
+
+/* Premium redesign v2 — explicit screen-level redesign */
+.brand-wrap{display:flex;flex-direction:column;gap:8px}
+.workspace-badge{display:inline-flex;align-self:flex-start;margin-right:10px;padding:4px 8px;border:1px solid #dce6ee;border-radius:999px;background:#f7fafc;color:#8a99a7;font-size:8px;letter-spacing:1.2px;font-weight:800}
+.page-heading h1{margin-bottom:2px}
+.page-heading p{margin:0;color:#8291a0;font-size:10px}
+.system-status{display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #dfe7ee;border-radius:999px;background:rgba(255,255,255,.72);font-size:9px;color:#718293}
+.system-status i{width:6px;height:6px;border-radius:50%;background:#4b9b87;box-shadow:0 0 0 4px rgba(75,155,135,.10)}
+.nav-link{position:relative;min-height:44px}
+.nav-link.active:after{content:"";position:absolute;right:4px;top:9px;bottom:9px;width:3px;border-radius:5px;background:linear-gradient(#5f8fb1,#4f8f89)}
+.nav-link.active .nav-icon{font-weight:900}
+.auth-gate{
+  display:grid!important;grid-template-columns:minmax(300px,.9fr) minmax(340px,470px);align-items:stretch!important;
+  gap:0!important;padding:0!important;overflow:auto!important;
+  background:
+   radial-gradient(900px 500px at 8% 8%,rgba(70,117,151,.10),transparent 60%),
+   radial-gradient(700px 450px at 92% 90%,rgba(63,137,127,.08),transparent 60%),
+   #f7f9fb!important;
+}
+.auth-visual{
+  position:relative;min-height:100dvh;display:flex;align-items:flex-end;padding:clamp(35px,6vw,90px);
+  overflow:hidden;background:linear-gradient(145deg,#eef4f8 0%,#f9fbfc 55%,#edf5f3 100%);
+  border-left:1px solid #e1e9ef;
+}
+.auth-visual-grid{position:absolute;inset:0;opacity:.38;background-image:linear-gradient(rgba(65,96,120,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(65,96,120,.09) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(90deg,#000,transparent 82%)}
+.auth-visual:before{content:"";position:absolute;width:520px;height:520px;border:1px solid rgba(61,102,143,.11);border-radius:50%;right:-220px;top:-170px;box-shadow:0 0 0 50px rgba(61,102,143,.025),0 0 0 100px rgba(61,102,143,.018)}
+.auth-logo-orb{position:absolute;right:clamp(35px,8vw,120px);top:clamp(50px,13vh,140px);width:150px;height:150px;border-radius:42px;display:grid;place-items:center;background:rgba(255,255,255,.62);border:1px solid rgba(208,222,233,.9);box-shadow:0 30px 80px rgba(40,68,90,.10),inset 0 1px #fff;backdrop-filter:blur(20px)}
+.auth-logo-orb span{font-size:43px;font-weight:900;letter-spacing:-3px;color:#3d668f}
+.auth-visual-copy{position:relative;display:flex;flex-direction:column;gap:8px;max-width:420px}
+.auth-visual-copy b{font-size:30px;color:#172534;letter-spacing:-.8px}
+.auth-visual-copy span{font-size:13px;color:#718293}
+.auth-card{margin:auto;width:min(470px,calc(100% - 36px))!important;padding:34px!important;border-radius:26px!important;box-shadow:0 28px 90px rgba(28,50,70,.12),inset 0 1px #fff!important}
+.auth-brandline{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+.auth-brandline>span:last-child{display:flex;flex-direction:column;gap:2px}
+.auth-brandline b{font-size:13px;color:#22384b}
+.auth-brandline small{font-size:9px;color:#8997a4}
+.auth-brandline .auth-mark{flex:0 0 auto;margin:0!important;width:50px!important;height:50px!important;border-radius:16px!important}
+.auth-footnote{padding-top:13px;margin-top:3px;border-top:1px solid #edf1f4;text-align:center;font-size:9px;color:#9aa5ae;line-height:1.7}
+@media(max-width:820px){
+ .auth-gate{grid-template-columns:1fr!important;place-items:center!important;padding:20px!important}
+ .auth-visual{display:none!important}
+ .auth-card{margin:auto!important;width:min(470px,100%)!important}
+}
+@media(max-width:560px){
+ .auth-gate{padding:12px!important}
+ .auth-card{padding:22px 18px!important}
+ .auth-brandline .auth-mark{width:46px!important;height:46px!important}
+ .system-status{display:none}
+ .page-heading p{display:none}
+}
