@@ -760,6 +760,13 @@ async function initStudio() {
       document.querySelector('#dimD').value=design.dimensions_mm.depth || 900;
       document.querySelector('#dimH').value=design.dimensions_mm.height || 850;
       if(design.fabric_color) document.querySelector('#modelColor').value=design.fabric_color;
+      if(design.materials){
+        if(design.materials.wood) document.querySelector('#modelWood').value=design.materials.wood;
+        if(design.materials.board) document.querySelector('#modelBoard').value=design.materials.board;
+        if(design.materials.foam) document.querySelector('#modelFoam').value=design.materials.foam;
+        if(design.materials.fabric) document.querySelector('#modelFabric').value=design.materials.fabric;
+        if(design.materials.support) document.querySelector('#modelSupport').value=design.materials.support;
+      }
       build();
       if(Array.isArray(design.parts)){
         design.parts.forEach((saved,index)=>{
