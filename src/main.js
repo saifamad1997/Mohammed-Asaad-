@@ -637,6 +637,14 @@ async function initStudio() {
         m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);m.userData.originalEmissive=m.material.emissive?m.material.emissive.getHex():0x000000;
         group.add(m);parts.push(m);return m;
       };
+      const addPiping=(name,points,radius=.0035)=>{
+        const curve=new THREE.CatmullRomCurve3(points.map(point=>new THREE.Vector3(...point)),true,'centripetal');
+        const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,64,radius,6,true),cloth.clone());
+        mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData.partName=name;
+        mesh.userData.base=mesh.position.clone();mesh.userData.baseSize=new THREE.Vector3(radius*2,radius*2,radius*2);
+        mesh.userData.baseScale=mesh.scale.clone();mesh.userData.partSize=mesh.userData.baseSize.clone();
+        mesh.userData.originalEmissive=0;group.add(mesh);parts.push(mesh);return mesh;
+      };
       const legH=Math.max(.11,h*.13),seatY=Math.max(.34,h*.43),seatH=Math.max(.12,h*.17),armW=isChair?.12:.16;
       const railH=.075,railT=.04,frameY=legH+railH/2;
       // Structural timber frame: solid rails, cross braces and plywood deck, all dimensioned in metres.
@@ -668,6 +676,8 @@ async function initStudio() {
         const cw=isCorner?w*.28:w*.82/cushionCount;
         const cx=isCorner?-w*.27+i*cw*1.02:(i-(cushionCount-1)/2)*cw;
         add('وسادة مقعد مكسوة قماش '+(i+1),cx,seatY+.035,0,cw*.96,seatH,d*.68,cloth);
+        const px=cw*.96/2-.018,pz=d*.68/2-.018,py=seatY+.035+seatH/2+.002;
+        addPiping('خياطة حافة وسادة المقعد '+(i+1),[[cx-px,py,-pz],[cx+px,py,-pz],[cx+px,py,pz],[cx-px,py,pz]]);
       }
       // Back cushions are plump and softly rounded, not hard cuboids.
       const backCount=isChair?1:(isCorner?3:cushionCount);
@@ -676,6 +686,8 @@ async function initStudio() {
         const bx=isCorner?-w*.27+i*bw*1.02:(i-(backCount-1)/2)*bw;
         const pillow=add('مخدة ظهر محشوة '+(i+1),bx,seatY+seatH*.78,-d*.32,bw*.94,h*.29,.19,cloth);
         pillow.rotation.x=-.1;
+        const seamZ=-d*.32+.097,seamY=seatY+seatH*.78,seamW=bw*.94/2-.014,seamH=h*.29/2-.014;
+        addPiping('خياطة إطار مخدة الظهر '+(i+1),[[bx-seamW,seamY-seamH,seamZ],[bx+seamW,seamY-seamH,seamZ],[bx+seamW,seamY+seamH,seamZ],[bx-seamW,seamY+seamH,seamZ]],.0028);
       }
       // Arms are upholstered over timber cores; add inner/outer padding separately.
       for(const side of [-1,1]){
