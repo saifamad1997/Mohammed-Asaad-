@@ -264,7 +264,7 @@ export function mountCadKernelLab() {
     const match = text.match(new RegExp('(?:' + names + ')[^0-9]{0,12}(\\d+(?:\\.\\d+)?)'));
     if (!match) return null;
     const value = Number(match[1]);
-    return /\\b(?:سم|سنتيمتر|centimeters?|cm)\\b/i.test(text) ? value * 10 : value;
+    return /(?:سم|سنتيمتر|centimeters?|cm)/i.test(text) ? value * 10 : value;
   };
   voiceSend.addEventListener('click', () => {
     const request = normalizeArabicDigits(voiceInput.value.trim());
