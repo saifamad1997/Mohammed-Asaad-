@@ -19,31 +19,58 @@ app.innerHTML = `
 <div class="app-shell">
   <aside class="sidebar">
     <div class="brand-wrap">
-      <a class="brand" href="#" aria-label="الرئيسية"><span class="brand-mark">MA</span><span><strong>محمد أسعد</strong><small>للتنجيد والتصميم الهندسي</small></span></a>
-      <span class="workspace-badge">WORKSPACE</span>
+      <a class="brand" href="#" aria-label="الرئيسية">
+        <span class="brand-mark">MA</span>
+        <span class="brand-copy"><strong>محمد أسعد</strong><small>للتنجيد والتصميم الهندسي</small></span>
+      </a>
+      <span class="workspace-badge">ENGINEERING WORKSPACE</span>
     </div>
-    <div class="nav-caption">مساحة العمل</div>
+    <div class="nav-caption">أقسام الشركة</div>
     <nav class="nav" id="mainNav" aria-label="التنقل الرئيسي"></nav>
-    <div class="sidebar-foot"><span class="online-dot"></span> مساحة عمل خاصة وآمنة</div>
+    <div class="sidebar-foot"><span class="online-dot"></span><span>النظام متصل</span><small>نسخة العمل الداخلية</small></div>
   </aside>
+
   <main class="main-area">
     <header class="topbar">
-      <div class="page-heading"><div class="eyebrow">محمد أسعد للتنجيد والتصميم</div><h1 id="pageTitle">لوحة المعلومات</h1><p id="pageSubtitle">نظرة سريعة على حركة الشركة والمشاريع الحالية</p></div>
-      <div class="top-actions"><span class="system-status"><i></i> النظام يعمل</span><span class="user-pill" id="userLabel">جارٍ التحقق…</span><button class="btn btn-primary" id="signIn" type="button" hidden>تسجيل الدخول</button><button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button><button class="btn btn-quiet" id="signOut" type="button" hidden>تسجيل الخروج</button></div>
+      <div class="mobile-brand"><span class="brand-mark">MA</span><span><b>محمد أسعد</b><small>Workspace</small></span></div>
+      <div class="page-heading">
+        <div class="eyebrow">مساحة التصميم والتصنيع</div>
+        <h1 id="pageTitle">لوحة المعلومات</h1>
+        <p id="pageSubtitle">نظرة سريعة على حركة الشركة والمشاريع الحالية</p>
+      </div>
+      <div class="top-actions">
+        <span class="system-status"><i></i> متصل</span>
+        <span class="user-pill" id="userLabel">جارٍ التحقق…</span>
+        <button class="btn btn-primary" id="signIn" type="button" hidden>تسجيل الدخول</button>
+        <button class="btn btn-primary install-app-btn" id="installApp" type="button">تثبيت التطبيق</button>
+        <button class="btn btn-quiet" id="signOut" type="button" hidden>تسجيل الخروج</button>
+      </div>
     </header>
+
+    <div class="workspace-strip" aria-label="مراحل العمل">
+      <span class="strip-label">مسار المشروع</span>
+      <button data-go="customers">العميل</button><b>→</b>
+      <button data-go="surveys">القياسات</button><b>→</b>
+      <button data-go="studio">3D</button><b>→</b>
+      <button data-go="cad2d">المخطط 2D</button><b>→</b>
+      <button data-go="orders">التصنيع</button><b>→</b>
+      <button data-go="delivery">التسليم</button>
+    </div>
+
     <p class="auth-action-feedback" id="authActionFeedback" role="status" aria-live="polite"></p>
     <div id="pageContent" class="page-content"><div class="loading-card">جارٍ تجهيز مساحة العمل…</div></div>
-    <footer class="app-footer">محمد أسعد للتنجيد <span>•</span> جميع الأبعاد الهندسية بالملليمتر ما لم يُذكر غير ذلك</footer>
+    <footer class="app-footer"><span>محمد أسعد للتنجيد</span><span>•</span><span>نظام التصميم والتصنيع الهندسي</span><span>•</span><span>الأبعاد بالملليمتر ما لم يُذكر غير ذلك</span></footer>
   </main>
 </div>`;
 
 const nav = document.querySelector('#mainNav');
-nav.innerHTML = navItems.map(([id,label,icon]) => `<button type="button" class="nav-link" data-page="${id}"><span class="nav-icon">${icon}</span><span>${label}</span></button>`).join('');
+nav.innerHTML = navItems.map(([id,label,icon]) => `<button type="button" class="nav-link" data-page="${id}"><span class="nav-icon">${icon}</span><span class="nav-label">${label}</span><span class="nav-arrow">‹</span></button>`).join('');
 nav.addEventListener('click', e => {
   const button = e.target.closest('[data-page]');
   if (button) navigate(button.dataset.page);
 });
 document.querySelector('.brand').addEventListener('click', e => { e.preventDefault(); navigate('dashboard'); });
+document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.go)));
 document.querySelector('#signIn').addEventListener('click', () => {
   window.dispatchEvent(new Event('open-auth-gate'));
 });
