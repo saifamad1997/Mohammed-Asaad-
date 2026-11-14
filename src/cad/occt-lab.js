@@ -12,6 +12,18 @@ export function mountCadKernelLab() {
         <button type="button" class="cad-kernel-close" aria-label="إغلاق">×</button>
       </header>
       <div class="cad-kernel-notice"><strong>مرحلة تطوير — لا تعتمد مخرجاتها للتصنيع بعد</strong><span>يُنشئ المحرك جسماً هندسياً B-Rep بأبعاد مدخلة بالملليمتر، ثم يصدره إلى GLB لعرضه داخل هذه النافذة. هذه الخطوة تثبت ربط النواة، ولا تعني أن مكتبة الأثاث أو ملفات التصنيع اكتملت.</span></div>
+      <section class="cad-voice-panel" aria-labelledby="cadVoiceTitle">
+        <div class="cad-voice-heading"><div><b id="cadVoiceTitle">تحدّث مع المهندس الذكي</b><span>أوامر صوتية أو كتابية باللغة العربية</span></div><span class="cad-voice-state" id="cadVoiceState">جاهز</span></div>
+        <div class="cad-voice-actions">
+          <button type="button" id="cadVoiceMic" class="cad-voice-mic"><span aria-hidden="true">🎙</span> ابدأ التحدث</button>
+          <button type="button" id="cadVoiceStop" class="cad-voice-stop" disabled>إيقاف الاستماع</button>
+          <label class="cad-voice-speak"><input type="checkbox" id="cadVoiceSpeak" checked> اقرأ الرد بصوت</label>
+        </div>
+        <label class="cad-voice-input-label" for="cadVoiceInput">ما الذي تريد تصميمه أو تعديله؟</label>
+        <textarea id="cadVoiceInput" rows="2" placeholder="مثال: صمم كنبة عرضها 220 سم وعمقها 90 سم وارتفاعها 85 سم، ثلاثة مقاعد."></textarea>
+        <div class="cad-voice-bottom"><button type="button" id="cadVoiceSend" class="cad-kernel-build">إرسال الطلب للمهندس</button><span id="cadVoiceSupport">سيطلب المتصفح إذن الميكروفون عند بدء التحدث.</span></div>
+        <div id="cadVoiceReply" class="cad-voice-reply" role="status" aria-live="polite">أنا جاهز. اكتب طلبك أو اضغط الميكروفون. راجع أي مقاسات قبل إنشاء المجسم.</div>
+      </section>
       <div class="cad-sofa-section">
         <div class="cad-sofa-heading"><div><b>أول نموذج أثاث — كنبة مستقيمة</b><span>تكوين مبدئي من قطع B-Rep مستقلة ينشئها محرك Open CASCADE</span></div><span class="cad-sofa-count">خشب · إسفنج · قماش · أرجل</span></div>
         <div class="cad-sofa-controls">
@@ -174,7 +186,113 @@ export function mountCadKernelLab() {
     }
   });
 
-  const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
+
+  // Arabic voice input: native browser speech recognition where available, with a typing fallback.
+  const voiceMic = overlay.querySelector('#cadVoiceMic');
+  const voiceStop = overlay.querySelector('#cadVoiceStop');
+  const voiceInput = overlay.querySelector('#cadVoiceInput');
+  const voiceState = overlay.querySelector('#cadVoiceState');
+  const voiceReply = overlay.querySelector('#cadVoiceReply');
+  const voiceSupport = overlay.querySelector('#cadVoiceSupport');
+  const voiceSend = overlay.querySelector('#cadVoiceSend');
+  const voiceSpeak = overlay.querySelector('#cadVoiceSpeak');
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let recognition = null;
+  let listening = false;
+  let pendingSofaBuild = false;
+  const sayReply = message => {
+    voiceReply.textContent = message;
+    if (voiceSpeak.checked && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = 'ar-JO';
+      utterance.rate = 0.96;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+  if (!SpeechRecognition) {
+    voiceMic.disabled = true;
+    voiceMic.title = 'الإملاء الصوتي غير مدعوم في هذا المتصفح';
+    voiceSupport.textContent = 'الإملاء الصوتي غير متاح في هذا المتصفح؛ يمكنك كتابة الطلب هنا واستخدام الإرسال.';
+  } else {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'ar-JO';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onstart = () => {
+      listening = true;
+      voiceState.textContent = 'أستمع إليك…';
+      voiceMic.disabled = true;
+      voiceStop.disabled = false;
+    };
+    recognition.onresult = event => {
+      let finalText = '';
+      let interimText = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalText += event.results[i][0].transcript;
+        else interimText += event.results[i][0].transcript;
+      }
+      if (finalText) voiceInput.value = (voiceInput.value ? voiceInput.value.trim() + ' ' : '') + finalText.trim();
+      voiceState.textContent = interimText ? 'أسمع: ' + interimText : 'تم التقاط الكلام';
+    };
+    recognition.onerror = event => {
+      voiceState.textContent = 'تعذر الاستماع';
+      voiceSupport.textContent = event.error === 'not-allowed'
+        ? 'لم يُسمح باستخدام الميكروفون. فعّل إذن الميكروفون من إعدادات المتصفح.'
+        : 'حدث خطأ في الإملاء الصوتي (' + event.error + '). يمكنك كتابة الطلب بدلًا من ذلك.';
+    };
+    recognition.onend = () => {
+      listening = false;
+      voiceMic.disabled = false;
+      voiceStop.disabled = true;
+      if (!closed && voiceState.textContent === 'أستمع إليك…') voiceState.textContent = 'انتهى الاستماع';
+    };
+    voiceMic.addEventListener('click', () => {
+      try { recognition.start(); }
+      catch (error) { voiceSupport.textContent = 'الميكروفون يعمل بالفعل أو يحتاج إعادة المحاولة.'; }
+    });
+    voiceStop.addEventListener('click', () => {
+      if (listening) recognition.stop();
+      voiceState.textContent = 'تم إيقاف الاستماع';
+    });
+  }
+  const normalizeArabicDigits = value => value
+    .replace(/[٠-٩]/g, digit => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, digit => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)));
+  const parseDimension = (text, terms) => {
+    const names = terms.join('|');
+    const match = text.match(new RegExp('(?:' + names + ')[^0-9]{0,12}(\\d+(?:\\.\\d+)?)'));
+    if (!match) return null;
+    const value = Number(match[1]);
+    return /\\b(?:سم|سنتيمتر|centimeters?|cm)\\b/i.test(text) ? value * 10 : value;
+  };
+  voiceSend.addEventListener('click', () => {
+    const request = normalizeArabicDigits(voiceInput.value.trim());
+    if (!request) { sayReply('اكتب طلبك أو اضغط الميكروفون أولاً.'); return; }
+    const asksSofa = /كنب|كنبة|أريكة|sofa/i.test(request);
+    const width = parseDimension(request, ['العرض','عرضها','عرضه','عرض']);
+    const depth = parseDimension(request, ['العمق','عمقها','عمقه','عمق']);
+    const height = parseDimension(request, ['الارتفاع','ارتفاعها','ارتفاعه','ارتفاع']);
+    const seatsMatch = request.match(/(\\d+)\\s*(?:مقاعد|مقعد|كرسي)/);
+    if (asksSofa) {
+      if (width) overlay.querySelector('#cadSofaWidth').value = width;
+      if (depth) overlay.querySelector('#cadSofaDepth').value = depth;
+      if (height) overlay.querySelector('#cadSofaHeight').value = height;
+      if (seatsMatch) overlay.querySelector('#cadSofaSeats').value = Math.max(2, Math.min(4, Number(seatsMatch[1])));
+      pendingSofaBuild = true;
+      const changed = [width && 'العرض ' + width + ' مم', depth && 'العمق ' + depth + ' مم', height && 'الارتفاع ' + height + ' مم'].filter(Boolean);
+      sayReply(changed.length
+        ? 'فهمت أنك تريد كنبة. جهزت المقاسات التالية: ' + changed.join('، ') + '. راجع الحقول ثم اضغط «إنشاء الكنبة بالمحرك الهندسي» لتأكيد إنشاء المعاينة.'
+        : 'فهمت أنك تريد تصميم كنبة. حدد العرض والعمق والارتفاع وعدد المقاعد في حقول الكنبة، ثم اضغط زر إنشاء الكنبة.');
+      voiceState.textContent = 'تم تحليل الطلب';
+    } else {
+      pendingSofaBuild = false;
+      sayReply('وصلني طلبك: «' + request + '». أستطيع حاليًا تنفيذ أوامر إعداد معاينة الكنبة المستقيمة المحددة فقط. بقية أنواع الأثاث والأوامر الحوارية تحتاج ربط محرك فهم الأوامر قبل تنفيذها.');
+      voiceState.textContent = 'تم استلام النص';
+    }
+  });
+  overlay.querySelector('#cadSofaBuild').addEventListener('click', () => { pendingSofaBuild = false; });
+\n  const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
   sofaBuildButton.addEventListener('click', async () => {
     sofaBuildButton.disabled = true;
     buildButton.disabled = true;
