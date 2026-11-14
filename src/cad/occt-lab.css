@@ -28,3 +28,17 @@
 .cad-part-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%}
 .cad-part-wood{background:#805b3f}.cad-part-foam{background:#d7c7a5}.cad-part-fabric{background:#718b91}.cad-part-metal{background:#34434d}
 @media(max-width:760px){.cad-sofa-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.cad-sofa-heading{align-items:flex-start;flex-direction:column}.cad-sofa-parts-list{grid-template-columns:1fr}}
+\n
+.cad-voice-panel{margin:13px 0;padding:14px;background:#f4f8fa;border:1px solid #d5e2e8;border-radius:12px}
+.cad-voice-heading{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+.cad-voice-heading>div{display:grid;gap:4px}.cad-voice-heading b{font-size:13px;color:#20394b}.cad-voice-heading span{font-size:10px;color:#718492}
+.cad-voice-state{padding:6px 9px;border-radius:20px;background:#e5eff1;color:#367779!important}
+.cad-voice-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.cad-voice-mic,.cad-voice-stop{border:1px solid #397f80;border-radius:8px;padding:9px 13px;background:#286f72;color:#fff;font:700 11px inherit;cursor:pointer}
+.cad-voice-stop{background:#fff;color:#435c6b;border-color:#d0dce3}.cad-voice-mic:disabled,.cad-voice-stop:disabled{opacity:.45;cursor:not-allowed}
+.cad-voice-speak{display:flex;align-items:center;gap:6px;font-size:10px;color:#607585}
+.cad-voice-input-label{display:block;margin:8px 0 5px;font-size:10px;color:#607585}
+#cadVoiceInput{display:block;width:100%;box-sizing:border-box;resize:vertical;padding:10px;border:1px solid #d4e0e7;border-radius:8px;background:#fff;color:#1c3445;font:inherit;font-size:12px;line-height:1.7}
+.cad-voice-bottom{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cad-voice-bottom .cad-kernel-build{width:auto;min-width:170px}.cad-voice-bottom>span{font-size:9px;color:#718492}
+.cad-voice-reply{margin-top:10px;padding:10px 12px;border-radius:8px;background:#e9f1f4;color:#3c5969;font-size:11px;line-height:1.8}
+@media(max-width:760px){.cad-voice-bottom{align-items:stretch;flex-direction:column}.cad-voice-bottom .cad-kernel-build{width:100%}}
