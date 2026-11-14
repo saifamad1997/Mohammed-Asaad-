@@ -827,3 +827,17 @@ body{overflow-x:hidden}
 .auth-logo-orb img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
 .auth-mark-image{width:46px;height:46px;object-fit:cover;border-radius:13px;border:1px solid #d5e5e8}
 @media(max-width:820px){.auth-mark-image{width:40px;height:40px}}
+
+/* Editable material and costing controls in the 3D studio */
+.model-costing-panel{display:grid;gap:10px;margin-top:14px;padding:14px;border:1px solid rgba(92,157,164,.22);border-radius:14px;background:rgba(20,42,51,.045)}
+.model-costing-panel>p,.model-costing-panel small{font-size:12px;line-height:1.7;color:var(--muted,#71808a)}
+.model-cost-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.model-cost-grid label{display:grid;gap:5px;font-size:12px;color:var(--text,#25343b)}
+.model-cost-grid input{width:100%;min-width:0;padding:9px;border:1px solid rgba(80,120,130,.25);border-radius:8px;background:var(--surface,#fff);color:inherit;font:inherit}
+.model-cost-results{display:grid;gap:8px;padding:12px;border-radius:10px;background:rgba(20,42,51,.07)}
+.model-cost-results>div{display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:12px}
+.model-cost-results b{font-variant-numeric:tabular-nums;text-align:left}
+.model-cost-results .model-cost-total{padding-top:9px;border-top:1px solid rgba(80,120,130,.25);font-weight:700}
+.model-cost-results .model-cost-sale{padding:11px;border-radius:8px;background:rgba(48,147,139,.13);font-size:14px;font-weight:800}
+.model-cost-results small{font-size:11px;line-height:1.65}
+@media(max-width:520px){.model-cost-grid{grid-template-columns:1fr 1fr}.model-cost-results>div{align-items:flex-start}}
