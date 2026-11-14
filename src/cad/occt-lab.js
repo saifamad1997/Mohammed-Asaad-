@@ -273,7 +273,7 @@ export function mountCadKernelLab() {
     const width = parseDimension(request, ['العرض','عرضها','عرضه','عرض']);
     const depth = parseDimension(request, ['العمق','عمقها','عمقه','عمق']);
     const height = parseDimension(request, ['الارتفاع','ارتفاعها','ارتفاعه','ارتفاع']);
-    const seatsMatch = request.match(/(\\d+)\\s*(?:مقاعد|مقعد|كرسي)/);
+    const seatsMatch = request.match(/(\d+)\s*(?:مقاعد|مقعد|كرسي)/);
     if (asksSofa) {
       if (width) overlay.querySelector('#cadSofaWidth').value = width;
       if (depth) overlay.querySelector('#cadSofaDepth').value = depth;
