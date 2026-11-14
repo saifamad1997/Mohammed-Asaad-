@@ -5,9 +5,14 @@ export function initAuthGate(supabase) {
   gate.className = 'auth-gate';
   gate.setAttribute('aria-label', 'تسجيل الدخول');
   gate.innerHTML = `
-    <form class="auth-card" id="authForm">
-      <div class="auth-mark">MA</div>
-      <p class="auth-eyebrow">نظام خاص بالشركة</p>
+    <div class="auth-visual" aria-hidden="true">
+        <div class="auth-visual-grid"></div>
+        <div class="auth-logo-orb"><span>MA</span></div>
+        <div class="auth-visual-copy"><b>محمد أسعد</b><span>للتنجيد والتصميم الهندسي</span></div>
+      </div>
+      <form class="auth-card" id="authForm">
+      <div class="auth-brandline"><span class="auth-mark">MA</span><span><b>مساحة العمل</b><small>نظام الشركة المتكامل</small></span></div>
+      <p class="auth-eyebrow">دخول آمن إلى النظام</p>
       <h1 id="authTitle">تسجيل الدخول</h1>
       <p class="auth-copy" id="authCopy">سجّل الدخول للوصول إلى مشاريع الشركة وبياناتها.</p>
       <label for="authEmail">البريد الإلكتروني</label>
@@ -17,6 +22,7 @@ export function initAuthGate(supabase) {
       <button class="auth-submit" id="authSubmit" type="submit">دخول</button>
       <button class="auth-switch" id="authSwitch" type="button">إنشاء حساب جديد لأول مرة</button>
       <p class="auth-feedback" id="authFeedback" role="status" aria-live="polite"></p>
+      <div class="auth-footnote">بيانات المشاريع والعملاء محمية وتظهر للمستخدم المصرح له فقط.</div>
     </form>`;
   document.body.appendChild(gate);
 
