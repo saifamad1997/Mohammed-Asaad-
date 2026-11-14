@@ -406,12 +406,49 @@ async function renderDelivery() {
 }
 async function renderReports() {
   try {
-    const [projects,materials,orders]=await Promise.all([rows('projects','id,status,estimated_cost'),rows('materials','id,quantity,min_quantity'),rows('work_orders','id,status')]);
-    setContent('الحسابات والتقارير',`<section class="stats-grid">
-      ${statCard('قيمة المشاريع التقديرية',money(projects.reduce((s,p)=>s+Number(p.estimated_cost||0),0)),'حسب القيم المدخلة')}
-      ${statCard('مواد تحتاج إعادة طلب',materials.filter(m=>Number(m.quantity)<=Number(m.min_quantity)).length,'تحت حد المخزون')}
-      ${statCard('أوامر مكتملة',orders.filter(o=>o.status==='completed').length,'من إجمالي '+orders.length)}
-    </section><section class="notice-card"><strong>مرحلة الحسابات التفصيلية</strong><p>سيتم بناء المصروفات والمشتريات والفواتير والدفعات والأرباح بعد اعتماد دورة المشروع وأوامر التصنيع، مع سجل مالي واضح لكل مشروع.</p></section>`);
+    const [projects,materials,orders,finance]=await Promise.all([
+      rows('projects','id,project_no,title,status,estimated_cost'),
+      rows('materials','id,quantity,min_quantity'),
+      rows('work_orders','id,status'),
+      rows('project_finances','id,project_id,type,amount,description,paid_at')
+    ]);
+    const projectMap=new Map(projects.map(p=>[p.id,p]));
+    const expenses=finance.filter(x=>x.type==='expense');
+    const payments=finance.filter(x=>x.type==='payment');
+    const invoices=finance.filter(x=>x.type==='invoice');
+    const totalEstimated=projects.reduce((s,p)=>s+Number(p.estimated_cost||0),0);
+    const totalExpenses=expenses.reduce((s,x)=>s+Number(x.amount||0),0);
+    const totalPayments=payments.reduce((s,x)=>s+Number(x.amount||0),0);
+    const totalInvoices=invoices.reduce((s,x)=>s+Number(x.amount||0),0);
+    const outstanding=Math.max(0,totalInvoices-totalPayments);
+    setContent('الحسابات والتقارير',`
+      <section class="stats-grid">
+        ${statCard('قيمة المشاريع التقديرية',money(totalEstimated),'حسب القيم المدخلة')}
+        ${statCard('المصروفات',money(totalExpenses),'مصروفات مسجلة')}
+        ${statCard('الدفعات المحصلة',money(totalPayments),'دفعات العملاء')}
+        ${statCard('المتبقي على الفواتير',money(outstanding),'فواتير ناقص الدفعات')}
+      </section>
+      <section class="section-card">
+        ${pageToolbar('السجل المالي','أضف مصروفاً أو فاتورة أو دفعة واربطها بالمشروع','إضافة حركة مالية','new-finance')}
+        ${tableHtml(['التاريخ','المشروع','النوع','البيان','المبلغ'],finance.map(x=>`<tr><td>${esc(new Date(x.paid_at||x.created_at).toLocaleDateString('ar-JO'))}</td><td>#${esc(projectMap.get(x.project_id)?.project_no||'—')} — ${esc(projectMap.get(x.project_id)?.title||'—')}</td><td>${esc({expense:'مصروف',payment:'دفعة',invoice:'فاتورة'}[x.type]||x.type)}</td><td>${esc(x.description||'—')}</td><td>${money(x.amount)}</td></tr>`).join(''))}
+      </section>
+      <section class="section-card">
+        <div class="section-heading"><div><h2>حالة التشغيل</h2><p>ملخص سريع للأعمال والمخزون والتصنيع.</p></div></div>
+        <div class="stats-grid">
+          ${statCard('مواد تحتاج إعادة طلب',materials.filter(m=>Number(m.quantity)<=Number(m.min_quantity)).length,'تحت حد المخزون')}
+          ${statCard('أوامر مكتملة',orders.filter(o=>o.status==='completed').length,'من إجمالي '+orders.length)}
+        </div>
+      </section>
+    `);
+    document.querySelector('[data-action="new-finance"]').onclick=()=>openForm('إضافة حركة مالية',[
+      {name:'project_id',label:'المشروع',type:'select',required:true,options:projects.map(p=>({value:p.id,label:'#'+p.project_no+' — '+p.title}))},
+      {name:'type',label:'نوع الحركة',type:'select',required:true,options:[{value:'expense',label:'مصروف'},{value:'payment',label:'دفعة'},{value:'invoice',label:'فاتورة'}]},
+      {name:'amount',label:'المبلغ بالدينار',type:'number',min:0.01,required:true},
+      {name:'paid_at',label:'التاريخ',type:'date'},
+      {name:'description',label:'البيان',type:'textarea'}
+    ],async data=>{
+      await insertRow('project_finances',{project_id:data.project_id,type:data.type,amount:Number(data.amount),description:data.description||null,paid_at:data.paid_at?new Date(data.paid_at).toISOString():new Date().toISOString()});
+    });
   } catch(error){showError(error);}
 }
 
