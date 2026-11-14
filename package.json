@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.119.0",
-    "three": "0.180.0"
+    "three": "0.180.0",
+    "opencascade.js": "2.0.0-beta.b5ff984"
   },
   "devDependencies": {
     "vite": "7.1.12"
