@@ -21,7 +21,9 @@ export function mountDrafting2D(root) {
   const canvas = root.querySelector('#cadCanvas'), ctx = canvas.getContext('2d');
   const readout = root.querySelector('#cadReadout'), status = root.querySelector('#cadStatus');
   const inspector = root.querySelector('#cadInspectorFields');
-  let tool = 'select', gridVisible = true, scale = .22, offset = {x:0,y:0}, items = [], selected = null, draft = null, pointer = null, history = [], activeLayer = '0';\n  const layerVisible = {'0':true,'1':true,'2':true};\n  const layerColor = {'0':'#344c46','1':'#0b8f83','2':'#a17842'};
+  let tool = 'select', gridVisible = true, scale = .22, offset = {x:0,y:0}, items = [], selected = null, draft = null, pointer = null, history = [], activeLayer = '0';
+  const layerVisible = {'0':true,'1':true,'2':true};
+  const layerColor = {'0':'#344c46','1':'#0b8f83','2':'#a17842'};
   const uid = () => 'e' + Math.random().toString(36).slice(2,10);
   const snapshot = () => history.push(JSON.stringify(items));
   const saveBlob = (name, content, type) => { const a=document.createElement('a'); const u=URL.createObjectURL(new Blob([content],{type})); a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),1000); };
