@@ -20,7 +20,7 @@ app.innerHTML = `
   <aside class="sidebar">
     <div class="brand-wrap">
       <a class="brand" href="#" aria-label="الرئيسية">
-        <span class="brand-mark">MA</span>
+        <img class="brand-mark brand-logo-image" src="/logo.svg" alt="شعار محمد أسعد"/>
         <span class="brand-copy"><strong>محمد أسعد</strong><small>للتنجيد والتصميم الهندسي</small></span>
       </a>
       <span class="workspace-badge">ENGINEERING WORKSPACE</span>
@@ -32,7 +32,7 @@ app.innerHTML = `
 
   <main class="main-area">
     <header class="topbar">
-      <div class="mobile-brand"><span class="brand-mark">MA</span><span><b>محمد أسعد</b><small>للتنجيد والتصميم الهندسي</small></span></div>
+      <div class="mobile-brand"><img class="brand-mark brand-logo-image" src="/logo.svg" alt="شعار محمد أسعد"/><span><b>محمد أسعد</b><small>للتنجيد والتصميم الهندسي</small></span></div>
       <div class="page-heading">
         <div class="eyebrow">مساحة التصميم والتصنيع</div>
         <h1 id="pageTitle">لوحة المعلومات</h1>
