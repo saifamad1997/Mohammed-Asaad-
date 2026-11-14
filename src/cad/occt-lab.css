@@ -10,3 +10,21 @@
 .cad-kernel-viewport{position:relative;min-height:490px;overflow:hidden;border:1px solid #cbd9e1;border-radius:12px;background:#e8eef2}.cad-kernel-viewport canvas{width:100%;height:100%;min-height:490px;display:block;touch-action:none}.cad-kernel-empty{height:100%;min-height:490px;display:grid;place-items:center;color:#718696;font-size:12px}
 .cad-kernel-footer{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-top:12px;color:#748696;font-size:9px}.cad-kernel-close-secondary{border:1px solid #d0dce3;background:#fff;color:#344d5d;border-radius:8px;padding:8px 12px;font:700 10px inherit;cursor:pointer}
 @media(max-width:760px){.cad-kernel-backdrop{padding:4px}.cad-kernel-dialog{max-height:99vh;padding:10px;border-radius:12px}.cad-kernel-head h2{font-size:17px}.cad-kernel-layout{grid-template-columns:1fr;min-height:0}.cad-kernel-controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.cad-kernel-controls h3,.cad-kernel-build,.cad-kernel-status,.cad-kernel-proof{grid-column:1/-1}.cad-kernel-controls label{margin:0}.cad-kernel-viewport,.cad-kernel-viewport canvas,.cad-kernel-empty{min-height:360px}.cad-kernel-footer{align-items:flex-start;flex-direction:column}}
+
+.cad-sofa-section{margin:13px 0;padding:14px;background:#fff;border:1px solid #dce5eb;border-radius:12px}
+.cad-sofa-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.cad-sofa-heading>div{display:grid;gap:4px}.cad-sofa-heading b{font-size:13px;color:#20394b}.cad-sofa-heading span{font-size:10px;color:#718492}
+.cad-sofa-count{padding:7px 9px;border-radius:7px;background:#edf3f5;color:#58717d!important;white-space:nowrap}
+.cad-sofa-controls{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;align-items:end}
+.cad-sofa-controls label{display:grid;gap:5px;font-size:10px;color:#607585}
+.cad-sofa-controls input,.cad-sofa-controls select{width:100%;box-sizing:border-box;padding:9px;border:1px solid #d4e0e7;border-radius:8px;background:#fbfdfe;color:#1c3445;font:inherit;font-size:11px}
+.cad-sofa-controls .cad-kernel-build{grid-column:1/-1;margin-top:0}
+.cad-sofa-parts{margin-top:11px;padding:10px;background:#f3f7f9;border-radius:9px;color:#687e8b;font-size:10px}
+.cad-sofa-parts-head{display:flex;justify-content:space-between;gap:8px;margin-bottom:8px;color:#294355}
+.cad-sofa-parts-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}
+.cad-sofa-part-row{display:flex;justify-content:space-between;gap:8px;padding:7px 8px;background:#fff;border:1px solid #e1e9ee;border-radius:6px;min-width:0}
+.cad-sofa-part-row span{display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cad-sofa-part-row b{white-space:nowrap;color:#334e60;font-variant-numeric:tabular-nums}
+.cad-part-dot{width:7px;height:7px;flex:0 0 7px;border-radius:50%}
+.cad-part-wood{background:#805b3f}.cad-part-foam{background:#d7c7a5}.cad-part-fabric{background:#718b91}.cad-part-metal{background:#34434d}
+@media(max-width:760px){.cad-sofa-controls{grid-template-columns:repeat(2,minmax(0,1fr))}.cad-sofa-heading{align-items:flex-start;flex-direction:column}.cad-sofa-parts-list{grid-template-columns:1fr}}
