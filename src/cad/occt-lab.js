@@ -292,7 +292,8 @@ export function mountCadKernelLab() {
     }
   });
   overlay.querySelector('#cadSofaBuild').addEventListener('click', () => { pendingSofaBuild = false; });
-\n  const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
+
+  const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
   sofaBuildButton.addEventListener('click', async () => {
     sofaBuildButton.disabled = true;
     buildButton.disabled = true;
