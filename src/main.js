@@ -504,10 +504,30 @@ async function initStudio() {
   const { OrbitControls } = controlsModule;
   const projectSelect=document.querySelector('#saveProject');
   try {
-    const projects=await rows('projects','id,project_no,title');
-    projectSelect.innerHTML='<option value="">اختر مشروعاً…</option>'+projects.map(p=>`<option value="${p.id}">#${p.project_no} — ${esc(p.title)}</option>`).join('');
+    const projects=await rows('projects','id,project_no,title,design_data');
+    projectSelect.innerHTML='<option value="">اختر مشروعاً…</option>'+projects.map(p=>`<option value="${p.id}" data-design="${esc(JSON.stringify(p.design_data?.furniture_model || {}))}">#${p.project_no} — ${esc(p.title)}</option>`).join('');
   } catch(e) { projectSelect.innerHTML='<option value="">تعذر تحميل المشاريع</option>'; }
   if (!host || !host.isConnected) return;
+  const officePanel=document.querySelector('.model-office-panel');
+  const partsBox=document.createElement('div');
+  partsBox.className='model-office-field';
+  partsBox.innerHTML='<label>مكونات القطعة</label><div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div>';
+  const dimensionBox=document.createElement('div');
+  dimensionBox.className='model-dimension-tools';
+  dimensionBox.innerHTML='<button type="button" id="toggleDimensions">إخفاء الأبعاد</button><button type="button" id="loadSavedModel">تحميل تصميم المشروع</button>';
+  officePanel?.insertBefore(partsBox, officePanel.querySelector('.model-office-note'));
+  officePanel?.insertBefore(dimensionBox, officePanel.querySelector('.model-office-note'));
+  host.style.position='relative';
+  const dimensionOverlay=document.createElement('div');
+  dimensionOverlay.className='model-dimension-overlay';
+  dimensionOverlay.innerHTML='<span class="dimension-width"></span><span class="dimension-depth"></span><span class="dimension-height"></span>';
+  host.appendChild(dimensionOverlay);
+  let dimensionsVisible=true;
+  document.querySelector('#toggleDimensions').onclick=()=>{
+    dimensionsVisible=!dimensionsVisible;
+    dimensionOverlay.hidden=!dimensionsVisible;
+    document.querySelector('#toggleDimensions').textContent=dimensionsVisible?'إخفاء الأبعاد':'إظهار الأبعاد';
+  };
   const scene=new THREE.Scene(); scene.background=new THREE.Color('#14232c');
   const camera=new THREE.PerspectiveCamera(38,1,.1,100); camera.position.set(3.9,2.65,4.8);
   let renderer,controls,raf=0,parts=[],separated=false;
@@ -538,6 +558,9 @@ async function initStudio() {
       for(const p of [...group.children]){group.remove(p);p.geometry.dispose();p.material.dispose();}
       parts=[]; const w=clamp('dimW',100,5000)/1000,d=clamp('dimD',100,3000)/1000,h=clamp('dimH',100,3000)/1000;
       const isChair=document.querySelector('#modelType').value==='chair';
+      dimensionOverlay.querySelector('.dimension-width').textContent='العرض: '+Math.round(w*1000)+' مم';
+      dimensionOverlay.querySelector('.dimension-depth').textContent='العمق: '+Math.round(d*1000)+' مم';
+      dimensionOverlay.querySelector('.dimension-height').textContent='الارتفاع: '+Math.round(h*1000)+' مم';
       const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,roughness:.94});
       const wood=new THREE.MeshStandardMaterial({color:'#74553f',roughness:.72});
       const foam=new THREE.MeshStandardMaterial({color:'#c7b5a0',roughness:1});
@@ -552,7 +575,10 @@ async function initStudio() {
       add('ذراع أيمن',w*.43,seatY*.48,0,armW,seatY+backH*.2,d*.82,cloth);
       for(let i=0;i<(isChair?1:3);i++){const x=isChair?0:(i-1)*w*.29;add('وسادة جلوس '+(i+1),x,seatY+.1,.035,w*(isChair?.7:.27),.12,d*.62,foam);}
       for(const xs of [-1,1])for(const zs of [-1,1])add('رجل',xs*w*.4,.09,zs*d*.38,.065,.18,.065,metal);
-      separated=false;request();
+      separated=false;
+      const list=document.querySelector('#modelPartsList');
+      if(list) list.innerHTML=parts.map((p,i)=>`<span><b>${i+1}</b> ${esc(p.userData.partName)}</span>`).join('');
+      request();
     };
     const clamp=(id,min,max)=>{const el=document.querySelector('#'+id);const n=Number(el.value);const v=Math.round(Math.max(min,Math.min(max,Number.isFinite(n)?n:min)));el.value=v;return v;};
     document.querySelector('#applyModel').onclick=build;
@@ -560,6 +586,28 @@ async function initStudio() {
     document.querySelector('#modelColor').onchange=build;
     document.querySelector('#explodeModel').onclick=()=>{if(separated)return;parts.forEach((p,i)=>{p.position.y+=.12+(i%3)*.08;p.position.x+=(i%2?1:-1)*.12;});separated=true;request();};
     document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>p.position.copy(p.userData.base));separated=false;request();};
+    const applySavedDesign=design=>{
+      if(!design || !design.dimensions_mm) return;
+      document.querySelector('#modelName').value=design.name || 'تصميم محفوظ';
+      document.querySelector('#modelType').value=design.type || 'sofa';
+      document.querySelector('#dimW').value=design.dimensions_mm.width || 2200;
+      document.querySelector('#dimD').value=design.dimensions_mm.depth || 900;
+      document.querySelector('#dimH').value=design.dimensions_mm.height || 850;
+      if(design.fabric_color) document.querySelector('#modelColor').value=design.fabric_color;
+      build();
+    };
+    const loadSelectedDesign=async()=>{
+      const projectId=projectSelect.value;
+      if(!projectId) return;
+      try{
+        const {data,error}=await supabase.from('projects').select('design_data').eq('id',projectId).eq('owner_id',currentUser.id).single();
+        if(error) throw error;
+        const design=data?.design_data?.furniture_model;
+        if(design?.dimensions_mm) applySavedDesign(design);
+      }catch(error){ alert(error?.message||'تعذر تحميل التصميم المحفوظ.'); }
+    };
+    projectSelect.onchange=loadSelectedDesign;
+    document.querySelector('#loadSavedModel').onclick=loadSelectedDesign;
     document.querySelector('#saveModel').onclick=async()=>{
       const button=document.querySelector('#saveModel');
       const projectId=projectSelect.value;
