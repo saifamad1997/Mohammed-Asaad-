@@ -427,3 +427,32 @@ tbody tr:hover{background:#f7faff}
 .model-part-choice[aria-pressed="true"]{border-color:#4ebbb4;background:#19353a;color:#efffff}
 .model-part-choice:hover{border-color:#4ebbb4}
 @media(max-width:560px){.model-part-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Refined sign-in and session controls */
+.auth-gate[hidden]{display:none!important}
+.auth-gate{z-index:2000;display:grid;place-items:center;padding:22px;background:radial-gradient(ellipse at 50% 0%,rgba(220,235,250,.8),transparent 58%),rgba(244,247,250,.97)}
+.auth-card{width:min(440px,100%);padding:clamp(22px,5vw,36px);border-radius:24px;display:flex;flex-direction:column;gap:11px;box-shadow:0 24px 80px rgba(37,59,82,.14)}
+.auth-mark{width:62px;height:62px;border-radius:19px;display:grid;place-items:center;font-size:21px;font-weight:900;letter-spacing:-1px;margin:0 auto 3px}
+.auth-eyebrow{text-align:center;font-size:11px;letter-spacing:.3px;margin:0}
+.auth-card h1{text-align:center;font-size:23px;margin:0 0 2px}
+.auth-copy{text-align:center;font-size:12px;line-height:1.8;margin:0 0 10px}
+.auth-card label{font-size:12px;font-weight:700;margin-top:3px}
+.auth-card input{width:100%;min-height:46px;padding:12px 13px;font-size:14px;outline:none;transition:border-color .18s,box-shadow .18s}
+.auth-submit{width:100%;min-height:47px;margin-top:8px;border-radius:12px;font-weight:800;font-size:14px;cursor:pointer;transition:transform .16s,background .16s}
+.auth-submit:active{transform:scale(.985)}
+.auth-submit:disabled{opacity:.65;cursor:wait}
+.auth-switch{border:0;background:transparent;padding:9px 6px;font-size:12px;font-weight:700;cursor:pointer}
+.auth-feedback{min-height:22px;margin:0;text-align:center;font-size:11px;line-height:1.7}
+.auth-action-feedback{min-height:0;margin:-13px 0 12px;text-align:left;color:#54799d;font-size:11px}
+.auth-action-feedback:empty{display:none}
+#signIn[hidden],#signOut[hidden]{display:none!important}
+.top-actions .btn{min-height:38px}
+@media(max-width:560px){
+ .auth-gate{padding:15px}
+ .auth-card{padding:23px 19px;border-radius:20px;gap:9px}
+ .auth-card h1{font-size:20px}
+ .auth-mark{width:54px;height:54px;border-radius:16px}
+ .auth-action-feedback{text-align:center;margin:0 0 8px}
+ .top-actions{flex-wrap:wrap}
+}
