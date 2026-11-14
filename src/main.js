@@ -494,7 +494,7 @@ function renderStudio() {
         <aside class="model-office-panel">
           <div class="model-panel-title"><span>01 / الخصائص</span><h2>بيانات القطعة</h2><p>تحكم بالأبعاد والخامات وشاهد التغييرات مباشرة</p></div>
           <div class="model-office-field"><label for="modelName">اسم التصميم</label><input id="modelName" value="كنبة تجريبية"></div>
-          <div class="model-office-field"><label for="modelType">نوع القطعة</label><select id="modelType"><option value="sofa">كنبة مستقيمة</option><option value="chair">كرسي مفرد</option></select></div>
+          <div class="model-office-field"><label for="modelType">نوع القطعة</label><select id="modelType"><option value="sofa">كنبة مستقيمة</option><option value="corner">كنبة زاوية L</option><option value="chair">كرسي مفرد</option></select></div>
           <div class="model-office-divider"></div>
           <div class="model-panel-subtitle">الأبعاد الهندسية <span>MM</span></div>
           <div class="model-dimension-grid">
@@ -503,7 +503,14 @@ function renderStudio() {
             <div class="model-office-field"><label for="dimH">الارتفاع</label><div class="model-input-unit"><input id="dimH" type="number" min="100" max="3000" value="850"><span>مم</span></div></div>
           </div>
           <div class="model-office-divider"></div>
-          <div class="model-office-field"><label for="modelColor">لون القماش</label><select id="modelColor"><option value="#71847e">أخضر رمادي</option><option value="#9a806b">بني فاتح</option><option value="#68758b">أزرق رمادي</option><option value="#b5aaa0">بيج</option></select></div>
+          <div class="model-office-field"><label for="modelColor">لون القماش</label><select id="modelColor"><option value="#71847e">أخضر رمادي</option><option value="#9a806b">بني فاتح</option><option value="#68758b">أزرق رمادي</option><option value="#b5aaa0">بيج</option><option value="#34383c">فحمي</option><option value="#b6a18a">جملي</option></select></div>
+          <div class="model-office-divider"></div>
+          <div class="model-panel-subtitle">الخامات والتنجيد <span>مواد فعلية</span></div>
+          <div class="model-office-field"><label for="modelWood">خشب الهيكل</label><select id="modelWood"><option value="beech">زان صلب</option><option value="pine">سويد / صنوبر</option><option value="plywood">كونتر مقاوم</option></select></div>
+          <div class="model-office-field"><label for="modelBoard">ألواح القاعدة</label><select id="modelBoard"><option value="plywood18">كونتر 18 مم</option><option value="plywood15">كونتر 15 مم</option><option value="mdf18">MDF 18 مم</option></select></div>
+          <div class="model-office-field"><label for="modelFoam">نوع الإسفنج</label><select id="modelFoam"><option value="hr35">HR كثافة 35</option><option value="hr40">HR كثافة 40</option><option value="soft28">ناعم كثافة 28</option><option value="firm45">قاسي كثافة 45</option></select></div>
+          <div class="model-office-field"><label for="modelFabric">نوع القماش</label><select id="modelFabric"><option value="linen">كتان منسوج</option><option value="velvet">مخمل</option><option value="chenille">شنيل</option><option value="boucle">بوكلية</option><option value="leather">جلد</option></select></div>
+          <div class="model-office-field"><label for="modelSupport">نظام التعليق</label><select id="modelSupport"><option value="webbing">أحزمة تنجيد</option><option value="spring">يايات + أحزمة</option><option value="plywood">قاعدة خشب كونتر</option></select></div>
           <div class="model-office-actions"><button class="model-action-primary" id="applyModel">⟳ تحديث المجسم</button><div><button id="explodeModel">فصل الأجزاء</button><button id="resetModel">إعادة التجميع</button></div></div>
           <div class="model-office-divider"></div>
           <div class="model-office-field"><label for="saveProject">ربط التصميم بمشروع</label><select id="saveProject"><option value="">اختر المشروع…</option></select></div>
@@ -522,16 +529,17 @@ function renderStudio() {
   initStudio();
 }
 async function initStudio() {
-  let THREE, controlsModule;
+  let THREE, controlsModule, roundedModule;
   const host = document.querySelector('#modelViewport');
   try {
-    [THREE, controlsModule] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js')]);
+    [THREE, controlsModule, roundedModule] = await Promise.all([import('three'), import('three/addons/controls/OrbitControls.js'), import('three/addons/geometries/RoundedBoxGeometry.js')]);
   } catch (error) {
     if (host) host.innerHTML = '<div class="scene-fallback">تعذّر تحميل مكتبة العرض ثلاثي الأبعاد. تحقق من الاتصال ثم أعد فتح المكتب.</div>';
     console.error(error);
     return;
   }
   const { OrbitControls } = controlsModule;
+  const { RoundedBoxGeometry } = roundedModule;
   const projectSelect=document.querySelector('#saveProject');
   try {
     const projects=await rows('projects','id,project_no,title,design_data');
@@ -587,27 +595,104 @@ async function initStudio() {
     const build=()=>{
       for(const p of [...group.children]){group.remove(p);p.geometry.dispose();p.material.dispose();}
       parts=[]; const w=clamp('dimW',100,5000)/1000,d=clamp('dimD',100,3000)/1000,h=clamp('dimH',100,3000)/1000;
-      const isChair=document.querySelector('#modelType').value==='chair';
+      const type=document.querySelector('#modelType').value;
+      const isChair=type==='chair',isCorner=type==='corner';
       dimensionOverlay.querySelector('.dimension-width').textContent='العرض: '+Math.round(w*1000)+' مم';
       dimensionOverlay.querySelector('.dimension-depth').textContent='العمق: '+Math.round(d*1000)+' مم';
       dimensionOverlay.querySelector('.dimension-height').textContent='الارتفاع: '+Math.round(h*1000)+' مم';
-      const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,roughness:.94});
-      const wood=new THREE.MeshStandardMaterial({color:'#74553f',roughness:.72});
-      const foam=new THREE.MeshStandardMaterial({color:'#c7b5a0',roughness:1});
-      const metal=new THREE.MeshStandardMaterial({color:'#83969b',metalness:.62,roughness:.3});
-      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);m.userData.originalEmissive=m.material.emissive?m.material.emissive.getHex():0x000000;group.add(m);parts.push(m);};
-      const seatY=Math.max(.28,h*.38),seatH=Math.max(.13,h*.19),backH=Math.max(.3,h*.48);
-      add('قاعدة الهيكل',0,.18,0,w*.94,.16,d*.88,wood);
-      add('وسادة المقعد',0,seatY,0,w*.9,seatH,d*.78,cloth);
-      add('مسند الظهر',0,seatY+backH*.47,-d*.38,w*.94,backH,.16,cloth);
-      const armW=isChair ? 0.13 : 0.16;
-      add('ذراع أيسر',-w*.43,seatY*.48,0,armW,seatY+backH*.2,d*.82,cloth);
-      add('ذراع أيمن',w*.43,seatY*.48,0,armW,seatY+backH*.2,d*.82,cloth);
-      for(let i=0;i<(isChair?1:3);i++){const x=isChair?0:(i-1)*w*.29;add('وسادة جلوس '+(i+1),x,seatY+.1,.035,w*(isChair?.7:.27),.12,d*.62,foam);}
-      for(const xs of [-1,1])for(const zs of [-1,1])add('رجل',xs*w*.4,.09,zs*d*.38,.065,.18,.065,metal);
+      const makeTexture=(kind)=>{
+        const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
+        const ctx=canvas.getContext('2d');
+        if(kind==='wood'){
+          ctx.fillStyle='#a47a52';ctx.fillRect(0,0,256,256);
+          for(let i=0;i<95;i++){ctx.strokeStyle=i%3?'rgba(65,35,15,.12)':'rgba(235,190,130,.2)';ctx.lineWidth=1+(i%4);ctx.beginPath();const y=i*2.8;ctx.moveTo(0,y);ctx.bezierCurveTo(65,y-8,150,y+9,256,y-3);ctx.stroke();}
+          for(let i=0;i<14;i++){ctx.strokeStyle='rgba(65,35,15,.12)';ctx.beginPath();ctx.ellipse((i*47)%256,(i*71)%256,10,3,0,0,Math.PI*2);ctx.stroke();}
+        }else{
+          ctx.fillStyle='#aaa';ctx.fillRect(0,0,256,256);
+          const step=kind==='boucle'?5:kind==='velvet'?3:4;
+          for(let y=0;y<256;y+=step)for(let x=0;x<256;x+=step){
+            const v=110+Math.floor(Math.random()*90);ctx.fillStyle='rgba('+v+','+v+','+v+','+(kind==='velvet'?.22:.32)+')';
+            if(kind==='boucle'){ctx.beginPath();ctx.arc(x+2,y+2,1.6,0,Math.PI*2);ctx.fill();}
+            else ctx.fillRect(x,y,kind==='linen'?1:2,kind==='linen'?3:1);
+          }
+        }
+        const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(kind==='wood'?2:3,kind==='wood'?1:3);return tex;
+      };
+      const woodKind=document.querySelector('#modelWood').value;
+      const boardKind=document.querySelector('#modelBoard').value;
+      const foamKind=document.querySelector('#modelFoam').value;
+      const fabricKind=document.querySelector('#modelFabric').value;
+      const woodTexture=makeTexture('wood'),fabricTexture=makeTexture(fabricKind==='boucle'?'boucle':fabricKind==='velvet'?'velvet':'fabric');
+      const woodColors={beech:'#a8794d',pine:'#c39a69',plywood:'#b58a5b'};
+      const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,map:fabricTexture,bumpMap:fabricTexture,bumpScale:fabricKind==='boucle'?.018:.006,roughness:fabricKind==='leather'?.48:fabricKind==='velvet'?.88:.96,metalness:0});
+      const wood=new THREE.MeshStandardMaterial({color:woodColors[woodKind],map:woodTexture,bumpMap:woodTexture,bumpScale:.025,roughness:.78});
+      const board=new THREE.MeshStandardMaterial({color:boardKind==='mdf18'?'#987653':'#c39a72',map:woodTexture,roughness:.86});
+      const foamColor=foamKind==='firm45'?'#d8c4a6':'#e5d6bc';
+      const foam=new THREE.MeshStandardMaterial({color:foamColor,roughness:1});
+      const metal=new THREE.MeshStandardMaterial({color:'#929b9c',metalness:.72,roughness:.28});
+      const add=(name,x,y,z,sx,sy,sz,mat,rounded=true)=>{
+        const min=Math.min(sx,sy,sz),radius=rounded?Math.max(.003,Math.min(.045,min*.16)):0;
+        const geometry=rounded?new RoundedBoxGeometry(sx,sy,sz,3,radius):new THREE.BoxGeometry(sx,sy,sz);
+        const m=new THREE.Mesh(geometry,mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;
+        m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);m.userData.originalEmissive=m.material.emissive?m.material.emissive.getHex():0x000000;
+        group.add(m);parts.push(m);return m;
+      };
+      const legH=Math.max(.11,h*.13),seatY=Math.max(.34,h*.43),seatH=Math.max(.12,h*.17),armW=isChair?.12:.16;
+      const railH=.075,railT=.04,frameY=legH+railH/2;
+      // Structural timber frame: solid rails, cross braces and plywood deck, all dimensioned in metres.
+      add('عارضة خشب أمامية 40×80 مم',0,frameY,d*.39,w*.9,.08,.04,wood,false);
+      add('عارضة خشب خلفية 40×80 مم',0,frameY,-d*.39,w*.9,.08,.04,wood,false);
+      add('عارضة جانبية يسرى 40×80 مم',-w*.44,frameY,0,.04,.08,d*.78,wood,false);
+      add('عارضة جانبية يمنى 40×80 مم',w*.44,frameY,0,.04,.08,d*.78,wood,false);
+      for(let i=1;i<=2;i++)add('دعامة عرضية للهيكل',0,frameY,(i-1.5)*d*.34,.04,.07,.68*d,wood,false);
+      const boardThickness=boardKind==='plywood15'?.015:.018;
+      add('لوح قاعدة '+(boardKind==='mdf18'?'MDF':'كونتر')+' '+Math.round(boardThickness*1000)+' مم',0,legH+railH+.012,0,w*.84,boardThickness,d*.72,board,false);
+      // Upholstery support system beneath the foam.
+      const support=document.querySelector('#modelSupport').value;
+      if(support==='webbing'||support==='spring'){
+        for(let i=0;i<6;i++)add('حزام تنجيد عرضي',-w*.34+i*w*.136,legH+railH+.035,0,.025,.012,d*.66,metal,false);
+        if(support==='spring')for(let i=0;i<5;i++){
+          const x=-w*.3+i*w*.15;
+          const pts=[];for(let j=0;j<=20;j++){const t=j/20;pts.push(new THREE.Vector3(x+Math.sin(t*Math.PI*6)*.018,legH+railH+.07+t*.075,-d*.27+t*d*.54));}
+          const curve=new THREE.CatmullRomCurve3(pts);const coil=new THREE.Mesh(new THREE.TubeGeometry(curve,48,.006,6,false),metal.clone());coil.userData.partName='ياي معدني';coil.userData.base=coil.position.clone();coil.userData.baseSize=new THREE.Vector3(.012,.012,.012);coil.userData.baseScale=coil.scale.clone();coil.userData.partSize=coil.userData.baseSize.clone();coil.userData.originalEmissive=0;group.add(coil);parts.push(coil);
+        }
+      }
+      // Legs: tapered, slightly splayed wooden feet.
+      for(const x of [-1,1])for(const z of [-1,1]){
+        const leg=new THREE.Mesh(new THREE.CylinderGeometry(.025,.038,legH,12),wood.clone());leg.position.set(x*w*.39,legH/2,z*d*.34);leg.rotation.z=x*.09;leg.castShadow=true;leg.userData.partName='رجل خشب';leg.userData.base=leg.position.clone();leg.userData.baseSize=new THREE.Vector3(.07,legH,.07);leg.userData.baseScale=leg.scale.clone();leg.userData.partSize=leg.userData.baseSize.clone();leg.userData.originalEmissive=0;group.add(leg);parts.push(leg);
+      }
+      // Foam deck and separate upholstered seat cushions.
+      add('طبقة إسفنج أساسية',0,seatY-.06,0,w*.83,.12,d*.7,foam);
+      const cushionCount=isChair?1:(isCorner?3:Math.max(2,Math.min(3,Math.round(w/0.75))));
+      for(let i=0;i<cushionCount;i++){
+        const cw=isCorner?w*.28:w*.82/cushionCount;
+        const cx=isCorner?-w*.27+i*cw*1.02:(i-(cushionCount-1)/2)*cw;
+        add('وسادة مقعد مكسوة قماش '+(i+1),cx,seatY+.035,0,cw*.96,seatH,d*.68,cloth);
+      }
+      // Back cushions are plump and softly rounded, not hard cuboids.
+      const backCount=isChair?1:(isCorner?3:cushionCount);
+      for(let i=0;i<backCount;i++){
+        const bw=isCorner?w*.27:w*.84/backCount;
+        const bx=isCorner?-w*.27+i*bw*1.02:(i-(backCount-1)/2)*bw;
+        const pillow=add('مخدة ظهر محشوة '+(i+1),bx,seatY+seatH*.78,-d*.32,bw*.94,h*.29,.19,cloth);
+        pillow.rotation.x=-.1;
+      }
+      // Arms are upholstered over timber cores; add inner/outer padding separately.
+      for(const side of [-1,1]){
+        const x=side*(w*.43);
+        add(side<0?'هيكل ذراع خشبي أيسر':'هيكل ذراع خشبي أيمن',x,seatY*.55,0,armW*.72,seatY+ h*.12,d*.72,wood);
+        add(side<0?'حشوة الذراع اليسرى':'حشوة الذراع اليمنى',x,seatY*.68,0,armW,seatY+h*.16,d*.78,foam);
+        add(side<0?'كسوة قماش الذراع اليسرى':'كسوة قماش الذراع اليمنى',x,seatY*.68,0,armW*.94,seatY+h*.15,d*.76,cloth);
+      }
+      if(isCorner){
+        add('امتداد قاعدة الزاوية',w*.27,frameY,d*.18,w*.42,.08,d*.43,wood,false);
+        add('لوح كونتر امتداد الزاوية',w*.27,legH+railH+.012,d*.18,w*.4,boardThickness,d*.4,board,false);
+        add('وسادة مقعد امتداد الزاوية',w*.27,seatY+.035,d*.18,w*.4,seatH,d*.4,cloth);
+        add('وسادة ظهر امتداد الزاوية',w*.27,seatY+seatH*.78,d*.02,w*.4,h*.29,.18,cloth);
+      }
       separated=false;
       const list=document.querySelector('#modelPartsList');
-      if(list) list.innerHTML=parts.map((p,i)=>`<button type="button" class="model-part-choice" data-part-index="${i}" aria-pressed="false"><b>${i+1}</b> ${esc(p.userData.partName)}</button>`).join('');
+      if(list) list.innerHTML=parts.map((p,i)=>'<button type="button" class="model-part-choice" data-part-index="'+i+'" aria-pressed="false"><b>'+(i+1)+'</b> '+esc(p.userData.partName)+'</button>').join('');
       list?.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
       selectedPartIndex=-1;
       const editor=document.querySelector('#modelPartEditor');
@@ -663,8 +748,8 @@ async function initStudio() {
       if(hit){const index=parts.indexOf(hit.object);if(index>=0)selectPart(index);}
     });
     document.querySelector('#applyModel').onclick=build;
-    document.querySelector('#modelType').onchange=()=>{const chair=document.querySelector('#modelType').value==='chair';document.querySelector('#dimW').value=chair?850:2200;document.querySelector('#dimD').value=850;document.querySelector('#dimH').value=chair?900:850;document.querySelector('#modelName').value=chair?'كرسي تجريبي':'كنبة تجريبية';build();};
-    document.querySelector('#modelColor').onchange=build;
+    document.querySelector('#modelType').onchange=()=>{const type=document.querySelector('#modelType').value;const chair=type==='chair';document.querySelector('#dimW').value=chair?850:2200;document.querySelector('#dimD').value=type==='corner'?1700:850;document.querySelector('#dimH').value=chair?900:850;document.querySelector('#modelName').value=chair?'كرسي مفرد':type==='corner'?'كنبة زاوية L':'كنبة مستقيمة';build();};
+    ['#modelColor','#modelWood','#modelBoard','#modelFoam','#modelFabric','#modelSupport'].forEach(selector=>document.querySelector(selector).onchange=build);
     document.querySelector('#explodeModel').onclick=()=>{if(separated)return;parts.forEach((p,i)=>{p.position.y+=.12+(i%3)*.08;p.position.x+=(i%2?1:-1)*.12;});separated=true;request();};
     document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>{p.position.copy(p.userData.base);p.scale.copy(p.userData.baseScale);});separated=false;request();};
     const applySavedDesign=design=>{
@@ -718,6 +803,7 @@ async function initStudio() {
         type:document.querySelector('#modelType').value,
         dimensions_mm:{width:clamp('dimW',100,5000),depth:clamp('dimD',100,3000),height:clamp('dimH',100,3000)},
         fabric_color:document.querySelector('#modelColor').value,
+        materials:{wood:document.querySelector('#modelWood').value,board:document.querySelector('#modelBoard').value,foam:document.querySelector('#modelFoam').value,fabric:document.querySelector('#modelFabric').value,support:document.querySelector('#modelSupport').value},
         parts:parts.map(p=>({name:p.userData.partName,position:p.userData.base.toArray(),size:p.userData.partSize.toArray()})),
         status:'concept_not_for_manufacturing'
       };
