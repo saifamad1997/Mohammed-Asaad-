@@ -715,12 +715,27 @@ async function initStudio() {
           for(let i=0;i<95;i++){ctx.strokeStyle=i%3?'rgba(65,35,15,.12)':'rgba(235,190,130,.2)';ctx.lineWidth=1+(i%4);ctx.beginPath();const y=i*2.8;ctx.moveTo(0,y);ctx.bezierCurveTo(65,y-8,150,y+9,256,y-3);ctx.stroke();}
           for(let i=0;i<14;i++){ctx.strokeStyle='rgba(65,35,15,.12)';ctx.beginPath();ctx.ellipse((i*47)%256,(i*71)%256,10,3,0,0,Math.PI*2);ctx.stroke();}
         }else{
-          ctx.fillStyle='#aaa';ctx.fillRect(0,0,256,256);
-          const step=kind==='boucle'?5:kind==='velvet'?3:4;
-          for(let y=0;y<256;y+=step)for(let x=0;x<256;x+=step){
-            const v=110+Math.floor(Math.random()*90);ctx.fillStyle='rgba('+v+','+v+','+v+','+(kind==='velvet'?.22:.32)+')';
-            if(kind==='boucle'){ctx.beginPath();ctx.arc(x+2,y+2,1.6,0,Math.PI*2);ctx.fill();}
-            else ctx.fillRect(x,y,kind==='linen'?1:2,kind==='linen'?3:1);
+          ctx.fillStyle=kind==='leather'?'#9a806c':'#aaa';ctx.fillRect(0,0,256,256);
+          if(kind==='leather'){
+            for(let i=0;i<6200;i++){
+              const x=(i*73)%256,y=(i*137)%256,r=.35+(i%5)*.16;
+              ctx.fillStyle=i%2?'rgba(45,29,20,.12)':'rgba(255,245,228,.16)';
+              ctx.beginPath();ctx.ellipse(x,y,r*1.5,r,((i%9)-4)*.08,0,Math.PI*2);ctx.fill();
+            }
+            for(let i=0;i<90;i++){ctx.strokeStyle='rgba(55,37,26,.045)';ctx.lineWidth=.5;ctx.beginPath();ctx.moveTo((i*31)%256,0);ctx.bezierCurveTo((i*47)%256,80,(i*19)%256,170,(i*61)%256,256);ctx.stroke();}
+          }else{
+            const step=kind==='boucle'?5:kind==='velvet'?3:kind==='linen'?4:3;
+            for(let y=0;y<256;y+=step){
+              for(let x=0;x<256;x+=step){
+                const v=kind==='velvet'?145+(x+y)%42:115+((x*7+y*11)%76);
+                ctx.fillStyle='rgba('+v+','+v+','+v+','+(kind==='velvet'?.16:.24)+')';
+                if(kind==='boucle'){ctx.beginPath();ctx.arc(x+2,y+2,1.8,0,Math.PI*2);ctx.fill();}
+                else ctx.fillRect(x,y,kind==='linen'?1.2:2.2,kind==='linen'?3.4:1.2);
+              }
+            }
+            if(kind==='linen'||kind==='fabric'){
+              for(let p=0;p<256;p+=4){ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p,0);ctx.lineTo(p,256);ctx.stroke();ctx.strokeStyle='rgba(35,35,35,.07)';ctx.beginPath();ctx.moveTo(0,p);ctx.lineTo(256,p);ctx.stroke();}
+            }
           }
         }
         const tex=new THREE.CanvasTexture(canvas);tex.wrapS=tex.wrapT=THREE.RepeatWrapping;tex.repeat.set(kind==='wood'?2:3,kind==='wood'?1:3);return tex;
@@ -729,9 +744,9 @@ async function initStudio() {
       const boardKind=document.querySelector('#modelBoard').value;
       const foamKind=document.querySelector('#modelFoam').value;
       const fabricKind=document.querySelector('#modelFabric').value;
-      const woodTexture=makeTexture('wood'),fabricTexture=makeTexture(fabricKind==='boucle'?'boucle':fabricKind==='velvet'?'velvet':'fabric');
+      const woodTexture=makeTexture('wood'),fabricTexture=makeTexture(fabricKind==='leather'?'leather':fabricKind==='boucle'?'boucle':fabricKind==='velvet'?'velvet':fabricKind==='linen'?'linen':'fabric');
       const woodColors={beech:'#a8794d',pine:'#c39a69',plywood:'#b58a5b'};
-      const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,map:fabricTexture,bumpMap:fabricTexture,bumpScale:fabricKind==='boucle'?.018:.006,roughness:fabricKind==='leather'?.48:fabricKind==='velvet'?.88:.96,metalness:0});
+      const cloth=new THREE.MeshStandardMaterial({color:document.querySelector('#modelColor').value,map:fabricTexture,bumpMap:fabricTexture,bumpScale:fabricKind==='boucle'?.026:fabricKind==='leather'?.012:.009,roughness:fabricKind==='leather'?.34:fabricKind==='velvet'?.9:.94,metalness:0});
       const wood=new THREE.MeshStandardMaterial({color:woodColors[woodKind],map:woodTexture,bumpMap:woodTexture,bumpScale:.025,roughness:.78});
       const board=new THREE.MeshStandardMaterial({color:boardKind==='mdf18'?'#987653':'#c39a72',map:woodTexture,roughness:.86});
       const foamColor=foamKind==='firm45'?'#d8c4a6':'#e5d6bc';
