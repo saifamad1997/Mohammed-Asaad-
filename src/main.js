@@ -32,7 +32,7 @@ app.innerHTML = `
 
   <main class="main-area">
     <header class="topbar">
-      <div class="mobile-brand"><span class="brand-mark">MA</span><span><b>محمد أسعد</b><small>Workspace</small></span></div>
+      <div class="mobile-brand"><span class="brand-mark">MA</span><span><b>محمد أسعد</b><small>للتنجيد والتصميم الهندسي</small></span></div>
       <div class="page-heading">
         <div class="eyebrow">مساحة التصميم والتصنيع</div>
         <h1 id="pageTitle">لوحة المعلومات</h1>
