@@ -850,3 +850,14 @@ body{overflow-x:hidden}
 .model-dimension-overlay small{font-size:10px;color:#52646b}
 .model-part-edit-grid label{font-size:12px}
 @media(max-width:560px){.model-dimension-overlay .dimension-cards{grid-template-columns:1fr}.model-dimension-overlay .dimension-cards span{text-align:right}}
+
+/* Exploded furniture parts: numbered, readable, individually dimensioned */
+.model-parts-heading{position:sticky;top:0;z-index:1;padding:9px 10px;background:#edf3f3;color:#21363d;font-size:12px;font-weight:850;border-radius:9px}
+.model-part-choice{display:flex!important;align-items:center!important;gap:10px!important;width:100%;padding:10px!important;text-align:right!important;border:1px solid rgba(65,103,112,.17)!important;border-radius:10px!important;background:#fff!important;margin:0 0 7px!important}
+.model-part-choice .part-number{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:8px;background:#e5efee;color:#176c69;font-size:12px}
+.model-part-choice .part-choice-info{display:grid;gap:5px;min-width:0}
+.model-part-choice .part-choice-info strong{font-size:12px;line-height:1.45;color:#20343c}
+.model-part-choice .part-choice-info small{font-size:11px;line-height:1.4;color:#587078;direction:rtl}
+.model-part-choice[aria-pressed="true"]{border-color:#278c87!important;background:#edf8f6!important}
+.model-explode-note{padding:10px;border-radius:9px;background:#edf7f5;color:#235d5b;font-size:11px;line-height:1.7}
+.model-parts-list.is-exploded{display:grid;gap:5px}
