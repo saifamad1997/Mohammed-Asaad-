@@ -42,3 +42,28 @@
 .cad-voice-bottom{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.cad-voice-bottom .cad-kernel-build{width:auto;min-width:170px}.cad-voice-bottom>span{font-size:9px;color:#718492}
 .cad-voice-reply{margin-top:10px;padding:10px 12px;border-radius:8px;background:#e9f1f4;color:#3c5969;font-size:11px;line-height:1.8}
 @media(max-width:760px){.cad-voice-bottom{align-items:stretch;flex-direction:column}.cad-voice-bottom .cad-kernel-build{width:100%}}
+
+
+/* Upholstery sample-book library */
+.cad-fabric-library{margin:13px 0;padding:14px;background:#fff;border:1px solid #d7e2e8;border-radius:12px}
+.cad-fabric-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px}
+.cad-fabric-head>div{display:grid;gap:4px}.cad-fabric-head b{font-size:13px;color:#20394b}.cad-fabric-head span{font-size:10px;color:#718492}
+#cadFabricCount{padding:6px 9px;background:#edf3f5;border-radius:7px;white-space:nowrap;color:#56717e}
+.cad-fabric-families{display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;scrollbar-width:thin}
+.cad-fabric-families button{flex:0 0 auto;border:1px solid #d7e1e7;background:#f8fafb;color:#526978;border-radius:20px;padding:7px 12px;font:700 10px inherit;cursor:pointer}
+.cad-fabric-families button.is-active{background:#244f5a;color:#fff;border-color:#244f5a}
+.cad-fabric-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;max-height:310px;overflow:auto;padding:2px 2px 8px}
+.cad-fabric-swatch{min-width:0;padding:5px;border:1px solid #e0e7eb;border-radius:9px;background:#fff;text-align:center;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+.cad-fabric-swatch:hover{transform:translateY(-2px);border-color:#78999d}
+.cad-fabric-swatch.is-selected{border:2px solid #287b7b;box-shadow:0 0 0 2px #287b7b20;padding:4px}
+.cad-fabric-chip{display:block;height:45px;border-radius:6px;background-color:var(--swatch);background-image:linear-gradient(135deg,#ffffff20,transparent 45%,#00000015);box-shadow:inset 0 0 0 1px #00000012}
+.cad-texture-woven{background-image:repeating-linear-gradient(0deg,#ffffff20 0 1px,transparent 1px 4px),repeating-linear-gradient(90deg,#00000012 0 1px,transparent 1px 4px),linear-gradient(135deg,#ffffff18,transparent 55%);background-color:var(--swatch)}
+.cad-texture-linen{background-image:repeating-linear-gradient(0deg,#ffffff25 0 1px,transparent 1px 3px),repeating-linear-gradient(90deg,#00000016 0 1px,transparent 1px 5px);background-color:var(--swatch)}
+.cad-texture-velvet{background-image:linear-gradient(115deg,#ffffff38 0%,transparent 35%,#00000030 100%);background-color:var(--swatch)}
+.cad-texture-leather{background-image:radial-gradient(ellipse at 25% 30%,#ffffff30 0 1px,transparent 2px),radial-gradient(ellipse at 70% 65%,#00000022 0 1px,transparent 2px),linear-gradient(135deg,#ffffff20,transparent 60%);background-size:13px 11px,17px 13px,100% 100%;background-color:var(--swatch)}
+.cad-texture-suede{background-image:linear-gradient(125deg,#ffffff30,transparent 48%,#00000018);background-color:var(--swatch)}
+.cad-texture-jacquard{background-image:repeating-linear-gradient(45deg,#ffffff20 0 3px,transparent 3px 8px),repeating-linear-gradient(-45deg,#00000012 0 2px,transparent 2px 8px);background-color:var(--swatch)}
+.cad-fabric-swatch b{display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:9px;color:#344d5d}
+.cad-fabric-swatch small{display:block;margin-top:2px;font-size:8px;color:#82919a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cad-fabric-selected{margin-top:9px;padding:9px 11px;border-radius:8px;background:#edf4f5;color:#42646b;font-size:10px}
+@media(max-width:760px){.cad-fabric-library{padding:10px}.cad-fabric-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;max-height:270px}.cad-fabric-chip{height:48px}.cad-fabric-head{align-items:flex-start}.cad-fabric-head>div span{line-height:1.6}}
