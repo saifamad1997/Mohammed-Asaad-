@@ -647,6 +647,24 @@ async function initStudio() {
   dimensionBox.innerHTML='<button type="button" id="toggleDimensions">إخفاء الأبعاد</button><button type="button" id="loadSavedModel">تحميل تصميم المشروع</button>';
   officePanel?.insertBefore(partsBox, officePanel.querySelector('.model-office-note'));
   officePanel?.insertBefore(dimensionBox, officePanel.querySelector('.model-office-note'));
+  const costingBox=document.createElement('section');
+  costingBox.className='model-costing-panel';
+  costingBox.innerHTML=`
+    <div class="model-office-divider"></div>
+    <div class="model-panel-subtitle">حساب المواد والتكلفة <span>تقديري قابل للتحكم</span></div>
+    <p>يُحدّث الحساب من مكونات المجسم وأبعادها. أدخل أسعار مورديك لتحصل على تقدير أقرب للواقع.</p>
+    <div class="model-cost-grid">
+      <label>الخشب / م³ (د.أ)<input id="costWoodRate" type="number" min="0" step=".01" value="450"></label>
+      <label>القماش / متر طولي (د.أ)<input id="costFabricRate" type="number" min="0" step=".01" value="8"></label>
+      <label>الإسفنج / م³ (د.أ)<input id="costFoamRate" type="number" min="0" step=".01" value="180"></label>
+      <label>أجور العمال (د.أ)<input id="costLabor" type="number" min="0" step=".01" value="35"></label>
+      <label>هدر المواد %<input id="costWaste" type="number" min="0" max="100" step=".5" value="12"></label>
+      <label>مصاريف تشغيل %<input id="costOverhead" type="number" min="0" max="100" step=".5" value="8"></label>
+      <label>الربح المستهدف %<input id="costProfit" type="number" min="0" max="500" step=".5" value="30"></label>
+    </div>
+    <div id="modelCostResults" class="model-cost-results" aria-live="polite">أضف أو حدّث المجسم لاحتساب المواد.</div>
+    <button type="button" class="model-action-primary" id="recalculateCost">إعادة حساب التكلفة والسعر</button>`;
+  officePanel?.insertBefore(costingBox, officePanel.querySelector('.model-office-note'));
   host.style.position='relative';
   const dimensionOverlay=document.createElement('div');
   dimensionOverlay.className='model-dimension-overlay';
@@ -931,6 +949,43 @@ async function initStudio() {
       }
     };
     build();resize();
+    const money=value=>(Number(value)||0).toFixed(2)+' د.أ';
+    const recalculateCost=()=>{
+      const n=id=>Math.max(0,Number(document.querySelector('#'+id)?.value)||0);
+      let timberM3=0, fabricM2=0, foamM3=0, accessoryCount=0;
+      for(const part of parts){
+        const size=part.userData.partSize||part.userData.baseSize;
+        if(!size)continue;
+        const x=Math.abs(size.x*part.scale.x),y=Math.abs(size.y*part.scale.y),z=Math.abs(size.z*part.scale.z);
+        const volume=x*y*z, area=2*(x*y+x*z+y*z), name=String(part.userData.partName||'');
+        if(/خشب|عارضة|قاعدة|لوح|كونتر|هيكل|قائم|دعامة/i.test(name))timberM3+=volume;
+        if(/وسادة|قماش|ظهر|مقعد|ذراع|تنجيد|حشوة/i.test(name)){fabricM2+=area*.72;foamM3+=volume*.62;}
+        if(/رجل|زر|حبل|مسمار|مفصل|ياي|سحاب|إكسسوار/i.test(name))accessoryCount++;
+      }
+      const waste=1+n('costWaste')/100;
+      const timberM3WithWaste=timberM3*waste,fabricM2WithWaste=fabricM2*waste,foamM3WithWaste=foamM3*waste;
+      const fabricLinear=fabricM2WithWaste/1.4;
+      const woodCost=timberM3WithWaste*n('costWoodRate');
+      const fabricCost=fabricLinear*n('costFabricRate');
+      const foamCost=foamM3WithWaste*n('costFoamRate');
+      const materials=woodCost+fabricCost+foamCost;
+      const labor=n('costLabor'),overhead=(materials+labor)*n('costOverhead')/100;
+      const total=materials+labor+overhead,profit=total*n('costProfit')/100,sale=total+profit;
+      const result=document.querySelector('#modelCostResults');
+      result.innerHTML=`
+        <div><span>خشب هيكل تقديري</span><b>${(timberM3WithWaste*1000).toFixed(2)} لتر م³ · ${money(woodCost)}</b></div>
+        <div><span>قماش تقديري (عرض 140 سم)</span><b>${fabricLinear.toFixed(2)} متر طولي · ${money(fabricCost)}</b></div>
+        <div><span>إسفنج تقديري</span><b>${foamM3WithWaste.toFixed(3)} م³ · ${money(foamCost)}</b></div>
+        <div><span>إكسسوارات مرصودة بالمكونات</span><b>${accessoryCount} مكوّن</b></div>
+        <div><span>أجور العمال</span><b>${money(labor)}</b></div>
+        <div><span>مصاريف التشغيل</span><b>${money(overhead)}</b></div>
+        <div class="model-cost-total"><span>تكلفة التصنيع التقديرية</span><b>${money(total)}</b></div>
+        <div><span>الربح المستهدف</span><b>${money(profit)}</b></div>
+        <div class="model-cost-sale"><span>سعر البيع المقترح</span><b>${money(sale)}</b></div>
+        <small>هذه حسبة أولية هندسية وليست قائمة قصّ أو فاتورة مواد معتمدة: نسب مساحة القماش والإسفنج تقريبية، ولا تشمل تلقائياً الخياطة واليايات والإكسسوارات إلا بعد تعريفها وتسعيرها.</small>`;
+    };
+    document.querySelector('#recalculateCost').addEventListener('click',recalculateCost);
+    ['costWoodRate','costFabricRate','costFoamRate','costLabor','costWaste','costOverhead','costProfit'].forEach(id=>document.querySelector('#'+id).addEventListener('input',recalculateCost));
     const refreshPartsList=()=>{
       const list=document.querySelector('#modelPartsList');
       if(!list)return;
