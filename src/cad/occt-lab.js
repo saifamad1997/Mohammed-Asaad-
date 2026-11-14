@@ -219,7 +219,7 @@ export function mountCadKernelLab() {
     return texture;
   };
   const applyFabricToModel = () => {
-    if (!model || !window.THREE) return;
+    if (!model) return;
     const family = fabricFamilies[selectedFabric.family];
     const THREE = viewerPromise && window.__cadThree;
     if (!THREE) return;
