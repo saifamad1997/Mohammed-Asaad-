@@ -676,12 +676,13 @@ async function initStudio() {
     dimensionOverlay.hidden=!dimensionsVisible;
     document.querySelector('#toggleDimensions').textContent=dimensionsVisible?'إخفاء الأبعاد':'إظهار الأبعاد';
   };
-  const scene=new THREE.Scene(); scene.background=new THREE.Color('#14232c');
+  const scene=new THREE.Scene(); scene.background=new THREE.Color('#e8e6e1');
   const camera=new THREE.PerspectiveCamera(38,1,.1,100); camera.position.set(3.9,2.65,4.8);
   let renderer,controls,raf=0,parts=[],separated=false;
   try {
     renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
-    renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5)); renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.setPixelRatio(Math.min(devicePixelRatio||1,2)); renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.12;
     renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     host.appendChild(renderer.domElement);
     const loadingHint=host.querySelector('.model-loading-hint'); if(loadingHint) loadingHint.remove();
@@ -689,16 +690,12 @@ async function initStudio() {
     const draw=()=>{raf=0;controls.update();renderer.render(scene,camera);};
     const request=()=>{if(!raf)raf=requestAnimationFrame(draw);};
     controls.addEventListener('change',request);
-    scene.add(new THREE.HemisphereLight(0xe5f4f4,0x26333a,2.1));
-    const light=new THREE.DirectionalLight(0xfff3df,3.0);light.position.set(4,7,5);light.castShadow=true;
-    light.shadow.mapSize.set(1024,1024);light.shadow.camera.left=-5;light.shadow.camera.right=5;light.shadow.camera.top=5;light.shadow.camera.bottom=-5;scene.add(light);
-    const fillLight=new THREE.PointLight(0x55bdb5,1.0,12);fillLight.position.set(-3,2.5,-2);scene.add(fillLight);
-    const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:'#765b45',roughness:.82}));floor.rotation.x=-Math.PI/2;floor.position.y=-.04;floor.receiveShadow=true;scene.add(floor);
-    const floorLines=new THREE.Group();scene.add(floorLines);
-    const plankMatA=new THREE.MeshStandardMaterial({color:'#8b6a50',roughness:.78}),plankMatB=new THREE.MeshStandardMaterial({color:'#6f513d',roughness:.82});
-    for(let i=-9;i<=9;i++){const plank=new THREE.Mesh(new THREE.BoxGeometry(19.8,.012,.018),i%2?plankMatA:plankMatB);plank.position.set(0,-.027,i*.48);floorLines.add(plank);}
-    const rug=new THREE.Mesh(new THREE.CircleGeometry(2.1,64),new THREE.MeshStandardMaterial({color:'#31454a',roughness:1}));rug.rotation.x=-Math.PI/2;rug.scale.set(1.25,.72,1);rug.position.set(0,-.018,.25);rug.receiveShadow=true;scene.add(rug);
-    const grid=new THREE.GridHelper(10,20,0x45616a,0x30454d);grid.position.y=-.012;grid.material.transparent=true;grid.material.opacity=.16;scene.add(grid);
+    scene.add(new THREE.HemisphereLight(0xffffff,0x77716a,2.25));
+    const light=new THREE.DirectionalLight(0xfff5e8,4.1);light.position.set(4,7,5);light.castShadow=true;
+    light.shadow.mapSize.set(2048,2048);light.shadow.camera.left=-5;light.shadow.camera.right=5;light.shadow.camera.top=5;light.shadow.camera.bottom=-5;light.shadow.bias=-.00012;scene.add(light);
+    const fillLight=new THREE.DirectionalLight(0xffffff,1.65);fillLight.position.set(-4,3,-3);scene.add(fillLight);
+    const rimLight=new THREE.DirectionalLight(0xdceeff,1.1);rimLight.position.set(1,4,-5);scene.add(rimLight);
+    const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({color:'#d5d1ca',roughness:.94}));floor.rotation.x=-Math.PI/2;floor.position.y=-.04;floor.receiveShadow=true;scene.add(floor);
     const group=new THREE.Group();scene.add(group);
     const resize=()=>{if(!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);request();};
     const observer=new ResizeObserver(resize);observer.observe(host);
@@ -741,8 +738,8 @@ async function initStudio() {
       const foam=new THREE.MeshStandardMaterial({color:foamColor,roughness:1});
       const metal=new THREE.MeshStandardMaterial({color:'#929b9c',metalness:.72,roughness:.28});
       const add=(name,x,y,z,sx,sy,sz,mat,rounded=true)=>{
-        const min=Math.min(sx,sy,sz),radius=rounded?Math.max(.003,Math.min(.045,min*.16)):0;
-        const geometry=rounded?new RoundedBoxGeometry(sx,sy,sz,3,radius):new THREE.BoxGeometry(sx,sy,sz);
+        const min=Math.min(sx,sy,sz),radius=rounded?Math.max(.004,Math.min(.075,min*.23)):0;
+        const geometry=rounded?new RoundedBoxGeometry(sx,sy,sz,6,radius):new THREE.BoxGeometry(sx,sy,sz);
         const m=new THREE.Mesh(geometry,mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;
         m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);m.userData.originalEmissive=m.material.emissive?m.material.emissive.getHex():0x000000;
         group.add(m);parts.push(m);return m;
