@@ -511,7 +511,7 @@ async function initStudio() {
   const officePanel=document.querySelector('.model-office-panel');
   const partsBox=document.createElement('div');
   partsBox.className='model-office-field';
-  partsBox.innerHTML='<label>مكونات القطعة</label><div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div>';
+  partsBox.innerHTML='<label>مكونات القطعة — اختر مكوّناً لتعديله</label><div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div><div id="modelPartEditor" class="model-part-editor"><p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p></div>';
   const dimensionBox=document.createElement('div');
   dimensionBox.className='model-dimension-tools';
   dimensionBox.innerHTML='<button type="button" id="toggleDimensions">إخفاء الأبعاد</button><button type="button" id="loadSavedModel">تحميل تصميم المشروع</button>';
@@ -565,7 +565,7 @@ async function initStudio() {
       const wood=new THREE.MeshStandardMaterial({color:'#74553f',roughness:.72});
       const foam=new THREE.MeshStandardMaterial({color:'#c7b5a0',roughness:1});
       const metal=new THREE.MeshStandardMaterial({color:'#83969b',metalness:.62,roughness:.3});
-      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;m.userData.base=m.position.clone();m.userData.partName=name;group.add(m);parts.push(m);};
+      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);group.add(m);parts.push(m);};
       const seatY=Math.max(.28,h*.38),seatH=Math.max(.13,h*.19),backH=Math.max(.3,h*.48);
       add('قاعدة الهيكل',0,.18,0,w*.94,.16,d*.88,wood);
       add('وسادة المقعد',0,seatY,0,w*.9,seatH,d*.78,cloth);
@@ -577,15 +577,50 @@ async function initStudio() {
       for(const xs of [-1,1])for(const zs of [-1,1])add('رجل',xs*w*.4,.09,zs*d*.38,.065,.18,.065,metal);
       separated=false;
       const list=document.querySelector('#modelPartsList');
-      if(list) list.innerHTML=parts.map((p,i)=>`<span><b>${i+1}</b> ${esc(p.userData.partName)}</span>`).join('');
+      if(list) list.innerHTML=parts.map((p,i)=>`<button type="button" class="model-part-choice" data-part-index="${i}" aria-pressed="false"><b>${i+1}</b> ${esc(p.userData.partName)}</button>`).join('');
+      list?.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
+      selectedPartIndex=-1;
+      const editor=document.querySelector('#modelPartEditor');
+      if(editor) editor.innerHTML='<p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p>';
       request();
     };
+    let selectedPartIndex=-1;
     const clamp=(id,min,max)=>{const el=document.querySelector('#'+id);const n=Number(el.value);const v=Math.round(Math.max(min,Math.min(max,Number.isFinite(n)?n:min)));el.value=v;return v;};
+    const selectPart=index=>{
+      const part=parts[index]; if(!part) return;
+      selectedPartIndex=index;
+      document.querySelectorAll('.model-part-choice').forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
+      const editor=document.querySelector('#modelPartEditor');
+      const pos=part.position, size=part.userData.partSize;
+      editor.innerHTML=`<strong>${esc(part.userData.partName)}</strong><div class="model-part-edit-grid">
+        <label>الموضع X <input data-part-value="x" type="number" step="1" value="${Math.round(pos.x*1000)}"></label>
+        <label>الموضع Y <input data-part-value="y" type="number" step="1" value="${Math.round(pos.y*1000)}"></label>
+        <label>الموضع Z <input data-part-value="z" type="number" step="1" value="${Math.round(pos.z*1000)}"></label>
+        <label>العرض X <input data-part-value="sx" type="number" min="10" step="1" value="${Math.max(10,Math.round(size.x*1000))}"></label>
+        <label>الارتفاع Y <input data-part-value="sy" type="number" min="10" step="1" value="${Math.max(10,Math.round(size.y*1000))}"></label>
+        <label>العمق Z <input data-part-value="sz" type="number" min="10" step="1" value="${Math.max(10,Math.round(size.z*1000))}"></label>
+      </div><small>جميع القيم بالملليمتر. التعديلات تخص هذا المكوّن فقط.</small>`;
+      editor.querySelectorAll('[data-part-value]').forEach(input=>input.addEventListener('change',()=>{
+        const value=Math.max(input.dataset.partValue==='x'||input.dataset.partValue==='y'||input.dataset.partValue==='z'?-5000:10,Math.min(5000,Number(input.value)||0));
+        input.value=value;
+        const key=input.dataset.partValue;
+        if(key==='x'||key==='y'||key==='z'){
+          part.position[key==='x'?'x':key==='y'?'y':'z']=value/1000;
+          part.userData.base=part.position.clone();
+        }else{
+          const axis=key==='sx'?'x':key==='sy'?'y':'z';
+          part.userData.partSize[axis]=value/1000;
+          part.scale[axis]=part.userData.partSize[axis]/part.userData.baseSize[axis];
+          part.userData.baseScale=part.scale.clone();
+        }
+        request();
+      }));
+    };
     document.querySelector('#applyModel').onclick=build;
     document.querySelector('#modelType').onchange=()=>{const chair=document.querySelector('#modelType').value==='chair';document.querySelector('#dimW').value=chair?850:2200;document.querySelector('#dimD').value=850;document.querySelector('#dimH').value=chair?900:850;document.querySelector('#modelName').value=chair?'كرسي تجريبي':'كنبة تجريبية';build();};
     document.querySelector('#modelColor').onchange=build;
     document.querySelector('#explodeModel').onclick=()=>{if(separated)return;parts.forEach((p,i)=>{p.position.y+=.12+(i%3)*.08;p.position.x+=(i%2?1:-1)*.12;});separated=true;request();};
-    document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>p.position.copy(p.userData.base));separated=false;request();};
+    document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>{p.position.copy(p.userData.base);p.scale.copy(p.userData.baseScale);});separated=false;request();};
     const applySavedDesign=design=>{
       if(!design || !design.dimensions_mm) return;
       document.querySelector('#modelName').value=design.name || 'تصميم محفوظ';
@@ -595,6 +630,25 @@ async function initStudio() {
       document.querySelector('#dimH').value=design.dimensions_mm.height || 850;
       if(design.fabric_color) document.querySelector('#modelColor').value=design.fabric_color;
       build();
+      if(Array.isArray(design.parts)){
+        design.parts.forEach((saved,index)=>{
+          const part=parts[index]; if(!part) return;
+          if(Array.isArray(saved.position)&&saved.position.length===3){
+            part.position.fromArray(saved.position);
+            part.userData.base=part.position.clone();
+          }
+          if(Array.isArray(saved.size)&&saved.size.length===3){
+            part.userData.partSize.fromArray(saved.size);
+            part.scale.set(
+              part.userData.partSize.x/part.userData.baseSize.x,
+              part.userData.partSize.y/part.userData.baseSize.y,
+              part.userData.partSize.z/part.userData.baseSize.z
+            );
+            part.userData.baseScale=part.scale.clone();
+          }
+        });
+        request();
+      }
     };
     const loadSelectedDesign=async()=>{
       const projectId=projectSelect.value;
@@ -618,7 +672,7 @@ async function initStudio() {
         type:document.querySelector('#modelType').value,
         dimensions_mm:{width:clamp('dimW',100,5000),depth:clamp('dimD',100,3000),height:clamp('dimH',100,3000)},
         fabric_color:document.querySelector('#modelColor').value,
-        parts:parts.map(p=>({name:p.userData.partName,position:p.userData.base.toArray()})),
+        parts:parts.map(p=>({name:p.userData.partName,position:p.userData.base.toArray(),size:p.userData.partSize.toArray()})),
         status:'concept_not_for_manufacturing'
       };
       try {
