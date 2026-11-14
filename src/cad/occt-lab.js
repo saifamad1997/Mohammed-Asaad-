@@ -1,4 +1,4 @@
-import { createKernelBoxPreview } from './occt-kernel.js';
+import { createKernelBoxPreview, createSofaAssemblyPreview } from './occt-kernel.js';
 
 export function mountCadKernelLab() {
   document.querySelector('#cadKernelLab')?.remove();
@@ -12,6 +12,17 @@ export function mountCadKernelLab() {
         <button type="button" class="cad-kernel-close" aria-label="إغلاق">×</button>
       </header>
       <div class="cad-kernel-notice"><strong>اختبار تقني — ليس تصميم أثاث نهائياً</strong><span>يُنشئ المحرك جسماً هندسياً B-Rep بأبعاد مدخلة بالملليمتر، ثم يصدره إلى GLB لعرضه داخل هذه النافذة. هذه الخطوة تثبت ربط النواة، ولا تعني أن مكتبة الأثاث أو ملفات التصنيع اكتملت.</span></div>
+      <div class="cad-sofa-section">
+        <div class="cad-sofa-heading"><div><b>أول نموذج أثاث — كنبة مستقيمة</b><span>تكوين مبدئي من قطع B-Rep مستقلة ينشئها محرك Open CASCADE</span></div><span class="cad-sofa-count">خشب · إسفنج · قماش · أرجل</span></div>
+        <div class="cad-sofa-controls">
+          <label>العرض الكلي (مم)<input id="cadSofaWidth" type="number" min="500" max="4000" value="2200"></label>
+          <label>العمق الكلي (مم)<input id="cadSofaDepth" type="number" min="500" max="4000" value="900"></label>
+          <label>الارتفاع الكلي (مم)<input id="cadSofaHeight" type="number" min="500" max="4000" value="850"></label>
+          <label>عدد المقاعد<select id="cadSofaSeats"><option value="2">مقعدين</option><option value="3" selected>3 مقاعد</option><option value="4">4 مقاعد</option></select></label>
+          <button type="button" id="cadSofaBuild" class="cad-kernel-build">إنشاء الكنبة بالمحرك الهندسي</button>
+        </div>
+        <div class="cad-sofa-parts" id="cadSofaParts"><span>بعد الإنشاء ستظهر هنا قائمة القطع المستقلة وأبعاد كل قطعة.</span></div>
+      </div>
       <div class="cad-kernel-layout">
         <aside class="cad-kernel-controls">
           <h3>أبعاد الجسم التجريبي</h3>
@@ -159,6 +170,67 @@ export function mountCadKernelLab() {
       console.error('Open CASCADE test failed:', error);
       setStatus('تعذر تشغيل المحرك: ' + (error?.message || 'خطأ غير معروف') + ' — راجع سجل البناء والتشغيل.');
     } finally {
+      buildButton.disabled = false;
+    }
+  });
+
+  const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
+  sofaBuildButton.addEventListener('click', async () => {
+    sofaBuildButton.disabled = true;
+    buildButton.disabled = true;
+    try {
+      const dimensions = {
+        width: Number(overlay.querySelector('#cadSofaWidth').value),
+        depth: Number(overlay.querySelector('#cadSofaDepth').value),
+        height: Number(overlay.querySelector('#cadSofaHeight').value),
+        seats: Number(overlay.querySelector('#cadSofaSeats').value)
+      };
+      const viewer = await (viewerPromise ||= ensureViewer());
+      if (model) {
+        viewer.scene.remove(model);
+        model.traverse(item => {
+          item.geometry?.dispose?.();
+          if (Array.isArray(item.material)) item.material.forEach(material => material.dispose?.());
+          else item.material?.dispose?.();
+        });
+        model = null;
+      }
+      if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+      const result = await createSofaAssemblyPreview(dimensions, setStatus);
+      objectUrl = result.url;
+      setStatus('تم بناء قطع الكنبة الصلبة. جارٍ تحميل التجميعة ثلاثية الأبعاد…');
+      const gltf = await viewer.load(result.url);
+      model = gltf.scene;
+      const palette = { wood: 0x805b3f, foam: 0xd7c7a5, fabric: 0x718b91, metal: 0x34434d };
+      let meshIndex = 0;
+      model.traverse(item => {
+        if (!item.isMesh) return;
+        const part = result.parts[Math.min(meshIndex, result.parts.length - 1)];
+        item.material = new viewer.THREE.MeshStandardMaterial({
+          color: palette[part?.category] || 0x82939a,
+          roughness: part?.category === 'metal' ? 0.38 : 0.82,
+          metalness: part?.category === 'metal' ? 0.68 : 0.02
+        });
+        item.castShadow = true;
+        item.receiveShadow = true;
+        meshIndex++;
+      });
+      viewer.add(model);
+      viewer.fit(model);
+      URL.revokeObjectURL(result.url);
+      objectUrl = null;
+      const partsHost = overlay.querySelector('#cadSofaParts');
+      partsHost.innerHTML = '<div class="cad-sofa-parts-head"><b>مكونات التجميعة</b><span>' + result.parts.length + ' قطعة مستقلة · الأبعاد بالملليمتر</span></div>' +
+        '<div class="cad-sofa-parts-list">' + result.parts.map(part =>
+          '<div class="cad-sofa-part-row"><span><i class="cad-part-dot cad-part-' + part.category + '"></i>' + part.label + '</span><b>' +
+          Math.round(part.width) + ' × ' + Math.round(part.depth) + ' × ' + Math.round(part.height) + '</b></div>'
+        ).join('') + '</div>';
+      setStatus('نجح إنشاء كنبة مستقيمة من ' + result.parts.length + ' قطعة B-Rep مستقلة. هذه معاينة هندسية أولية وليست ملف تصنيع معتمداً.');
+    } catch (error) {
+      console.error('OCCT sofa assembly failed:', error);
+      setStatus('تعذر إنشاء الكنبة: ' + (error?.message || 'خطأ غير معروف'));
+    } finally {
+      sofaBuildButton.disabled = false;
       buildButton.disabled = false;
     }
   });
