@@ -565,7 +565,7 @@ async function initStudio() {
       const wood=new THREE.MeshStandardMaterial({color:'#74553f',roughness:.72});
       const foam=new THREE.MeshStandardMaterial({color:'#c7b5a0',roughness:1});
       const metal=new THREE.MeshStandardMaterial({color:'#83969b',metalness:.62,roughness:.3});
-      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);group.add(m);parts.push(m);};
+      const add=(name,x,y,z,sx,sy,sz,mat)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat.clone());m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;m.userData.base=m.position.clone();m.userData.baseSize=new THREE.Vector3(sx,sy,sz);m.userData.baseScale=m.scale.clone();m.userData.partName=name;m.userData.partSize=new THREE.Vector3(sx,sy,sz);m.userData.originalEmissive=m.material.emissive?m.material.emissive.getHex():0x000000;group.add(m);parts.push(m);};
       const seatY=Math.max(.28,h*.38),seatH=Math.max(.13,h*.19),backH=Math.max(.3,h*.48);
       add('قاعدة الهيكل',0,.18,0,w*.94,.16,d*.88,wood);
       add('وسادة المقعد',0,seatY,0,w*.9,seatH,d*.78,cloth);
@@ -589,6 +589,7 @@ async function initStudio() {
     const selectPart=index=>{
       const part=parts[index]; if(!part) return;
       selectedPartIndex=index;
+      parts.forEach((item,i)=>{if(item.material?.emissive)item.material.emissive.setHex(i===index?0x1b7772:item.userData.originalEmissive);});
       document.querySelectorAll('.model-part-choice').forEach((button,i)=>button.setAttribute('aria-pressed',String(i===index)));
       const editor=document.querySelector('#modelPartEditor');
       const pos=part.position, size=part.userData.partSize;
@@ -616,6 +617,21 @@ async function initStudio() {
         request();
       }));
     };
+    const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
+    let pointerStart=null;
+    renderer.domElement.addEventListener('pointerdown',event=>{pointerStart={x:event.clientX,y:event.clientY};});
+    renderer.domElement.addEventListener('pointerup',event=>{
+      if(!pointerStart)return;
+      const moved=Math.hypot(event.clientX-pointerStart.x,event.clientY-pointerStart.y);
+      pointerStart=null;
+      if(moved>5)return;
+      const rect=renderer.domElement.getBoundingClientRect();
+      pointer.x=((event.clientX-rect.left)/rect.width)*2-1;
+      pointer.y=-((event.clientY-rect.top)/rect.height)*2+1;
+      raycaster.setFromCamera(pointer,camera);
+      const hit=raycaster.intersectObjects(parts,false)[0];
+      if(hit){const index=parts.indexOf(hit.object);if(index>=0)selectPart(index);}
+    });
     document.querySelector('#applyModel').onclick=build;
     document.querySelector('#modelType').onchange=()=>{const chair=document.querySelector('#modelType').value==='chair';document.querySelector('#dimW').value=chair?850:2200;document.querySelector('#dimD').value=850;document.querySelector('#dimH').value=chair?900:850;document.querySelector('#modelName').value=chair?'كرسي تجريبي':'كنبة تجريبية';build();};
     document.querySelector('#modelColor').onchange=build;
