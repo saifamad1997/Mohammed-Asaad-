@@ -27,7 +27,14 @@ export function initAuthGate(supabase) {
   const toggle = gate.querySelector('#authSwitch');
   const feedback = gate.querySelector('#authFeedback');
   const password = gate.querySelector('#authPassword');
+  const email = gate.querySelector('#authEmail');
   let mode = 'signin';
+
+  window.addEventListener('open-auth-gate', () => {
+    gate.hidden = false;
+    gate.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => email.focus());
+  });
 
   function setMode(next) {
     mode = next;
@@ -48,18 +55,21 @@ export function initAuthGate(supabase) {
     event.preventDefault();
     feedback.textContent = 'جارٍ التحقق…';
     submit.disabled = true;
-    const email = form.elements.email.value.trim();
+    const originalSubmitLabel = mode === 'signup' ? 'إنشاء الحساب' : 'دخول';
+    submit.textContent = 'جارٍ التحقق…';
+    const emailValue = form.elements.email.value.trim();
     const passwordValue = form.elements.password.value;
     try {
       const result = mode === 'signup'
-        ? await supabase.auth.signUp({ email, password: passwordValue })
-        : await supabase.auth.signInWithPassword({ email, password: passwordValue });
+        ? await supabase.auth.signUp({ email: emailValue, password: passwordValue })
+        : await supabase.auth.signInWithPassword({ email: emailValue, password: passwordValue });
       if (result.error) throw result.error;
       if (mode === 'signup' && !result.data.session) {
         feedback.textContent = 'تم إنشاء الحساب. افحص بريدك الإلكتروني لتأكيده، ثم ارجع وسجّل الدخول.';
       } else {
         feedback.textContent = 'تم الدخول بنجاح.';
         gate.hidden = true;
+        gate.setAttribute('aria-hidden', 'true');
         window.dispatchEvent(new Event('supabase-auth-change'));
       }
     } catch (error) {
@@ -84,19 +94,23 @@ export function initAuthGate(supabase) {
       }
     } finally {
       submit.disabled = false;
+      submit.textContent = originalSubmitLabel;
     }
   });
 
   supabase.auth.getSession().then(({ data, error }) => {
     gate.hidden = Boolean(data?.session);
+    gate.setAttribute('aria-hidden', String(Boolean(data?.session)));
     if (error) feedback.textContent = 'تعذر التحقق من جلسة الدخول. حاول تسجيل الدخول.';
   }).catch(() => {
     gate.hidden = false;
+    gate.setAttribute('aria-hidden', 'false');
     feedback.textContent = 'تعذر الاتصال للتحقق من جلسة الدخول. تحقق من الإنترنت ثم أعد المحاولة.';
   });
 
   supabase.auth.onAuthStateChange((_event, session) => {
     gate.hidden = Boolean(session);
+    gate.setAttribute('aria-hidden', String(Boolean(session)));
     window.dispatchEvent(new Event('supabase-auth-change'));
   });
 }
