@@ -1,0 +1,20 @@
+Open CASCADE Technology (OCCT) / OpenCascade.js
+
+This project evaluates OpenCascade.js, a JavaScript/WebAssembly port of Open CASCADE Technology.
+The OCCT kernel is licensed under GNU LGPL version 2.1 with the Open CASCADE exception.
+It is not public-domain software. Redistribution of the WebAssembly binary requires compliance
+with the applicable license terms, including notices, source availability and replaceability
+requirements. The exact source revision and complete license materials must be packaged before
+this kernel is enabled in a public production deployment.
+
+Upstream:
+https://github.com/Open-Cascade-SAS/OCCT
+https://github.com/donalffons/opencascade.js
+https://ocjs.org/docs/about
+
+License:
+https://github.com/Open-Cascade-SAS/OCCT/blob/master/LICENSE_LGPL_21.txt
+https://github.com/Open-Cascade-SAS/OCCT/blob/master/OCCT_LGPL_EXCEPTION.txt
+
+No warranty is provided by the upstream project. This notice is informational and does not
+replace the complete license texts or legal review.
