@@ -36,12 +36,12 @@ export function mountPanelPlanner(root) {
   const calculate=()=>{
     try{
       const parts=$('ppParts').value.split(/\\r?\\n/).map((line,i)=>line.trim()).filter(Boolean).map((line,i)=>{
-        const cells=line.split(',').map(x=>x.trim());
+        const cells=line.split(',').map(x=>normalizeDigits(x.trim()));
         if(cells.length<4) throw new Error('السطر '+(i+1)+': أدخل الاسم والعرض والطول والعدد.');
         const [label,widthMm,lengthMm,qty,thicknessMm,grain='طولي']=cells;
         return {id:'p'+i,label,widthMm:Number(widthMm),lengthMm:Number(lengthMm),qty:Number(qty),thicknessMm:Number(thicknessMm||$('ppThickness').value),grainDirection:grain==='none'?'none':grain};
       });
-      lastPlan=nestPanels(parts,{widthMm:Number($('ppStockW').value),heightMm:Number($('ppStockH').value),thicknessMm:Number($('ppThickness').value)},{kerfMm:Number($('ppKerf').value),marginMm:Number($('ppMargin').value),minOffcutMm:Number($('ppOffcut').value)});
+      if(!parts.length) throw new Error('أدخل قطعة واحدة على الأقل قبل الحساب.');\n      lastPlan=nestPanels(parts,{widthMm:Number($('ppStockW').value),heightMm:Number($('ppStockH').value),thicknessMm:Number($('ppThickness').value)},{kerfMm:Number($('ppKerf').value),marginMm:Number($('ppMargin').value),minOffcutMm:Number($('ppOffcut').value)});
       const plan=lastPlan;
       $('ppReport').innerHTML=`
         <section class="pp-summary">
@@ -72,4 +72,4 @@ export function mountPanelPlanner(root) {
   window.addEventListener('afterprint',afterPrint);
   return ()=>{window.removeEventListener('afterprint',afterPrint);afterPrint();};
 }
-function escapeXml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));}
+function normalizeDigits(value){return String(value).replace(/[٠-٩۰-۹]/g,d=>String('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(d)%10));}\nfunction escapeXml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));}
