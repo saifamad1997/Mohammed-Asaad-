@@ -108,6 +108,21 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     }
     return { sheets, errors };
   }
+  function assemblyPreview() {
+    const W = number(catalog.width), H = number(catalog.height), D = number(catalog.depth);
+    const t = number(catalog.board.thickness);
+    const parts = catalog.parts.filter(p => number(p.width) > 0 && number(p.height) > 0 && number(p.qty) > 0);
+    return {
+      W, H, D, t,
+      parts: parts.slice(0, 24).map((p, i) => ({
+        name: p.name || 'قطعة',
+        width: number(p.width),
+        height: number(p.height),
+        qty: Math.floor(number(p.qty)),
+        index: i + 1
+      }))
+    };
+  }
   function markDirty() { dirty = true; catalog.approved = false; }
   function render() {
     const project = selectedProject();
@@ -165,7 +180,22 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
             <p>${sheet.placements.length} قطعة موضوعة · المساحات غير المرسومة متبقية / هدر قص محتمل</p>
           </article>`).join('') || '<p class="muted">أدخل قطعاً صالحة لتظهر خريطة القص.</p>'}
       </section>
-      <section class="section-card mfg-section"><div class="section-heading"><div><h2>5. ملاحظات التصنيع والاعتماد</h2><p>التصميم لا يُعتمد قبل مراجعة الحواف والثقوب والإكسسوارات وطريقة التجميع.</p></div><span class="status-tag">${catalog.approved ? 'معتمد للمراجعة النهائية' : 'مسودة غير معتمدة'}</span></div>
+      <section class="section-card mfg-section mfg-assembly"><div class="section-heading"><div><h2>5. شكل الخزانة والتفكيك والتركيب</h2><p>المعاينة مبنية على أبعاد المشروع نفسها، وتعرض الشكل العام والقطع الموجودة في كتالوج القص. نقاط التثبيت والخلوصات والإكسسوارات لا تُعتبر نهائية قبل اعتمادها.</p></div></div>
+        \${(() => { const a=assemblyPreview(); const scale=Math.max(0.25,Math.min(1,520/Math.max(a.W,a.H,1))); const w=Math.max(260,a.W*scale), h=Math.max(280,a.H*scale); const dx=Math.min(90,a.D*scale*0.35), dy=Math.min(55,a.D*scale*0.22); const x=45,y=30; return \`
+        <div class="mfg-assembly-grid">
+          <article class="mfg-assembly-card"><h3>الشكل المركب</h3><svg viewBox="0 0 \${w+140} \${h+110}" role="img" aria-label="معاينة شكل الخزانة">
+            <polygon points="\${x},\${y} \${x+w},\${y} \${x+w+dx},\${y-dy} \${x+dx},\${y-dy}" fill="#eef4f0" stroke="#2f6f60" stroke-width="3"/>
+            <rect x="\${x}" y="\${y}" width="\${w}" height="\${h}" rx="2" fill="#f8fbf9" stroke="#2f6f60" stroke-width="4"/>
+            <polygon points="\${x+w},\${y} \${x+w+dx},\${y-dy} \${x+w+dx},\${y+h-dy} \${x+w},\${y+h}" fill="#e1ebe5" stroke="#2f6f60" stroke-width="4"/>
+            <line x1="\${x+w/2}" y1="\${y+8}" x2="\${x+w/2}" y2="\${y+h-8}" stroke="#8aa99c" stroke-width="2"/>
+            <line x1="\${x+12}" y1="\${y+h/2}" x2="\${x+w-12}" y2="\${y+h/2}" stroke="#8aa99c" stroke-width="2" stroke-dasharray="8 8"/>
+            <text x="\${x+w/2}" y="\${y+h+34}" text-anchor="middle" font-size="16" font-weight="700" fill="#234b41">\${fromMm(a.W)} × \${fromMm(a.H)} \${unitLabel()}</text>
+            <text x="\${x+w+dx+10}" y="\${y+h/2}" font-size="14" fill="#234b41" transform="rotate(90 \${x+w+dx+10} \${y+h/2})">عمق \${fromMm(a.D)} \${unitLabel()}</text>
+          </svg></article>
+          <article class="mfg-assembly-card"><h3>التفكيك — القطع الفعلية</h3><div class="mfg-exploded-list">\${a.parts.map(p => \`<div class="mfg-exploded-row"><span>\${p.index}. \${esc(p.name)}</span><strong>\${fromMm(p.width)} × \${fromMm(p.height)} \${unitLabel()}</strong><small>العدد: \${p.qty}</small></div>\`).join('') || '<p class="muted">أضف قطعاً إلى كتالوج القص لتظهر هنا.</p>'}</div></article>
+        </div>\` })()}
+      </section>
+      <section class="section-card mfg-section"><div class="section-heading"><div><h2>6. ملاحظات التصنيع والاعتماد</h2><p>التصميم لا يُعتمد قبل مراجعة الحواف والثقوب والإكسسوارات وطريقة التجميع.</p></div><span class="status-tag">${catalog.approved ? 'معتمد للمراجعة النهائية' : 'مسودة غير معتمدة'}</span></div>
         <label class="mfg-notes">ملاحظات النجار / الحواف / المفصلات / السكك / التجميع<textarea data-notes rows="4">${esc(catalog.notes)}</textarea></label>
         <div class="mfg-approval"><button class="btn" data-approve>اعتماد بيانات الكتالوج للمراجعة</button><small>الاعتماد هنا لا يخصم المخزون ولا يحوّل الخطة الأولية إلى مخطط تصنيع نهائي.</small></div>
       </section>
