@@ -43,7 +43,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
   function selectedProject() { return projects.find(p => p.id === selected); }
   function hydrate(project) {
     const saved = project?.design_data?.manufacturing_catalog;
-    catalog = saved && saved.version === 1 ? structuredClone(saved) : blankCatalog();
+    catalog = saved && saved.version === 1 ? JSON.parse(JSON.stringify(saved)) : blankCatalog();
     catalog.title ||= project?.title || '';
     catalog.itemType ||= project?.furniture_type || 'قطعة أثاث';
     dirty = false;
