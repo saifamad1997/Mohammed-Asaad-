@@ -758,13 +758,13 @@ async function initStudio() {
       if(!raw){aiFeedback.textContent='اكتب وصف القطعة والقياسات أولاً.';return;}
       const normalized=raw.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g,'.');
       const findDimension=pattern=>{const m=normalized.match(pattern);if(!m)return null;const value=Number(m[1]);return Number.isFinite(value)&&value>0?{value,unit:m[2]||'cm'}:null;};
-      const width=findDimension(/(?:عرض|العرض|طول|الطول)\\s*(?:ها|ه)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
-      const depth=findDimension(/(?:عمق|العمق)\\s*(?:ها|ه)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
-      const height=findDimension(/(?:ارتفاع|الارتفاع)\\s*(?:ها|ه)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
+      const width=findDimension(/(?:عرض|العرض|طول|الطول)\s*(?:ها|ه)?\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
+      const depth=findDimension(/(?:عمق|العمق)\s*(?:ها|ه)?\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
+      const height=findDimension(/(?:ارتفاع|الارتفاع)\s*(?:ها|ه)?\s*[:=]?\s*(\d+(?:\.\d+)?)\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
       const toMm=item=>item?Math.round(item.value*(/^(?:مم|ملم|mm)$/i.test(item.unit)?1:10)):null;
       let type=null;
-      if(/كنبة\\s*(?:زاوية|ركنة)|زاوية\\s*l|\\bL\\b/i.test(normalized))type='corner';
-      else if(/كرسي|مقعد\\s*مفرد/i.test(normalized))type='chair';
+      if(/كنبة\s*(?:زاوية|ركنة)|زاوية\s*l|\bL\b/i.test(normalized))type='corner';
+      else if(/كرسي|مقعد\s*مفرد/i.test(normalized))type='chair';
       else if(/كنبة|صوفا|أريكة/i.test(normalized))type='sofa';
       if(type)document.querySelector('#modelType').value=type;
       if(width)document.querySelector('#dimW').value=toMm(width);
