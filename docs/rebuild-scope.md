@@ -32,14 +32,5 @@ Project ref: megcxclesylqggooayis (mohammad-asad-autocad, eu-central-1).
 Existing tables: customers, projects, room_surveys, materials, work_orders, project_files.
 RLS is enabled on all six. Current tables are empty and use owner_id linked to auth.users. Keep these security boundaries; do not make tables public. Extend schema through reviewed migrations rather than dropping/recreating the database.
 
-## Reusable legacy material recovered from prior Vercel deployments
-- archive/legacy/library-3d.html — prior 3D model library viewer and catalogue source.
-- archive/legacy/library-polyhaven.html — prior Poly Haven model library page.
-- archive/legacy/showroom-2026.html — prior furniture reference showroom.
-These are preserved as source/reference material, not treated as a complete CAD editor. Check each asset's license and attribution requirements before redistributing or embedding it.
-
-## Existing starter code
-The company workspace retains its 2D drafting tools and operational management sections. No 3D design office is included.
-
 ## Release safety
 Do not delete old Vercel projects, deployments, domains, source snapshots or Supabase resources until the new unified app is built, verified on phone and desktop, data access is tested, and the production domain is safely switched. Then clean up only confirmed redundant resources.
