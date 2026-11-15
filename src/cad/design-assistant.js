@@ -12,11 +12,11 @@ export function renderDesignAssistant() {
     <section class="assistant-shell">
       <div class="assistant-chat-head"><div><strong>مساعد التصميم الهندسي</strong><small><span class="assistant-live-dot"></span> جاهز لمناقشة فكرتك</small></div><button type="button" class="btn btn-quiet" id="assistantClear">محادثة جديدة</button></div>
       <div class="assistant-messages" id="assistantMessages" aria-live="polite"></div>
-      <div class="assistant-attachment" id="assistantAttachment" hidden></div>
+      <div class="assistant-voice-status" id="assistantVoiceStatus" hidden aria-live="polite">المحادثة الصوتية متوقفة</div>\n      <div class="assistant-attachment" id="assistantAttachment" hidden></div>
       <form class="assistant-composer" id="assistantForm">
         <label class="assistant-upload" title="إرفاق صورة أو رسمة"><input id="assistantImage" type="file" accept="image/png,image/jpeg,image/webp" hidden><span>＋</span></label>
         <textarea id="assistantInput" rows="1" maxlength="6000" placeholder="مثلاً: بدي مكتب قيمنق على شكل L، عرضه 200 سم..." required></textarea>
-        <button class="btn btn-primary assistant-send" id="assistantSend" type="submit">إرسال ↑</button>
+        <button class="btn btn-quiet assistant-voice" id="assistantVoice" type="button" aria-pressed="false">🎙️ محادثة صوتية</button><button class="btn btn-primary assistant-send" id="assistantSend" type="submit">إرسال ↑</button>
       </form>
       <div class="assistant-hints"><button type="button" data-prompt="صمم لي خزانة ملابس حسب المقاسات التي سأعطيك إياها">خزانة ملابس</button><button type="button" data-prompt="بدي أصمم مكتب قيمنق من الصفر">مكتب قيمنق</button><button type="button" data-prompt="حلل الصورة المرفقة واقترح طريقة تصنيعها">حلّل صورة</button><button type="button" data-prompt="ساعدني بتصميم كنب زاوية حسب مساحة الغرفة">كنب زاوية</button></div>
     </section>
@@ -30,7 +30,7 @@ export function renderDesignAssistant() {
   const attachment = root.querySelector('#assistantAttachment');
   const sendButton = root.querySelector('#assistantSend');
   let history = loadHistory();
-  let pendingImage = null;
+  let pendingImage = null;\n  let voiceSocket = null;\n  let voiceStream = null;\n  let voiceContext = null;\n  let voiceSource = null;\n  let voiceProcessor = null;\n  let voiceMute = null;\n  let voicePlaybackAt = 0;\n  let voiceSources = [];\n  let voiceStarting = false;\n  const voiceButton = root.querySelector('#assistantVoice');\n  const voiceStatus = root.querySelector('#assistantVoiceStatus');
 
   function loadHistory() {
     try { const value = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(value) ? value.slice(-MAX_HISTORY) : []; }
@@ -64,7 +64,7 @@ export function renderDesignAssistant() {
   }
   paint();
   root.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{input.value=button.dataset.prompt;input.focus();}));
-  root.querySelector('#assistantClear').addEventListener('click',()=>{history=[];pendingImage=null;attachment.hidden=true;attachment.textContent='';saveHistory();paint();});
+  root.querySelector('#assistantClear').addEventListener('click',()=>{stopVoice();history=[];pendingImage=null;attachment.hidden=true;attachment.textContent='';saveHistory();paint();});
   imageInput.addEventListener('change',()=>{
     const file=imageInput.files?.[0]; if(!file) return;
     if(file.size>5*1024*1024){alert('حجم الصورة أكبر من 5 ميغابايت. اختر صورة أصغر.');imageInput.value='';return;}
