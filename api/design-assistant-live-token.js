@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         }
       }
     };
-    const response = await fetch('https://generativelanguage.googleapis.com/v1alpha/auth_tokens', {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(payload)
