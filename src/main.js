@@ -7,7 +7,7 @@ import './cad/drafting-2d.css';
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
-  ['cad2d','الرسم الهندسي 2D','⌗'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
+  ['cad2d','الرسم الهندسي 2D','⌗'],['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
   ['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥']
 ];
@@ -147,7 +147,7 @@ function navigate(page) {
   }
   const routes = {
     dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects,
-    cad2d: renderCad2D, surveys: renderSurveys, materials: renderMaterials,
+    cad2d: renderCad2D, sketchup: renderSketchup, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
   routes[page]();
@@ -474,4 +474,75 @@ async function renderReports() {
 function renderCad2D() {
   setContent('الرسم الهندسي 2D', '<div id="cad2dRoot"></div>');
   sceneCleanup = mountDrafting2D(document.querySelector('#cad2dRoot'));
+}
+
+async function renderSketchup() {
+  try {
+    const [projects, surveys] = await Promise.all([
+      rows('projects','id,project_no,title,furniture_type,status,description,design_data,created_at'),
+      rows('room_surveys','id,project_id,room_name,length_cm,width_cm,height_cm,notes')
+    ]);
+    const statusMap = {draft:'مسودة',design:'قيد التصميم',approved:'معتمد',manufacturing:'قيد التصنيع',completed:'مكتمل',cancelled:'ملغي'};
+    const cards = projects.map(project => {
+      const projectSurveys = surveys.filter(s => s.project_id === project.id);
+      return `<article class="sketchup-project-card">
+        <div class="sketchup-project-head"><div><span class="eyebrow">المشروع #${esc(project.project_no)}</span><h3>${esc(project.title)}</h3></div><span class="status-tag">${esc(statusMap[project.status] || project.status || '—')}</span></div>
+        <p>${esc(project.furniture_type || 'نوع الأثاث غير محدد')} · ${projectSurveys.length} سجل قياسات</p>
+        <div class="sketchup-actions">
+          <button class="btn btn-primary" type="button" data-sketchup-open="${esc(project.id)}">فتح SketchUp Web</button>
+          <button class="btn" type="button" data-sketchup-export="${esc(project.id)}">تصدير بيانات المشروع</button>
+        </div>
+      </article>`;
+    }).join('');
+    setContent('SketchUp', `
+      <section class="sketchup-intro">
+        <div><span class="welcome-kicker">مساحة التصميم ثلاثي الأبعاد الخارجية</span><h2>اربط ملفات SketchUp بمشاريع الشركة</h2>
+        <p>افتح SketchUp Web، ثم افتح ملف المشروع بصيغة SKP من جهازك. بعد الانتهاء احفظ نسخة SKP على جهازك واحتفظ بها ضمن ملفات المشروع.</p></div>
+        <a class="btn btn-primary" href="https://app.sketchup.com/app" target="_blank" rel="noopener noreferrer">تشغيل SketchUp Web ↗</a>
+      </section>
+      <section class="notice-card"><strong>طريقة الربط الحالية</strong><p>هذه وصلة تشغيل وتسليم بيانات المشروع، وليست محرر SketchUp مضمّناً داخل النظام. ملفات SKP تُفتح وتُحفظ من SketchUp نفسه؛ لا تُرفع تلقائياً إلى قاعدة بيانات الشركة في هذه المرحلة.</p></section>
+      <section class="section-card">
+        <div class="section-heading"><div><h2>مشاريع الشركة</h2><p>اختر المشروع لتجهيز بياناته وقياساته قبل العمل عليه في SketchUp.</p></div></div>
+        <div class="sketchup-project-grid">${cards || '<div class="empty-state"><h3>لا توجد مشاريع بعد</h3><p>أنشئ مشروعاً أولاً من قسم المشاريع ليظهر هنا.</p></div>'}</div>
+      </section>
+      <section class="notice-card"><strong>ما الذي يصدره النظام؟</strong><p>ملف JSON يحتوي بيانات المشروع وسجلات القياسات المسجلة. هو ورقة تسليم معلوماتية للمصمم، وليس ملف SKP أو مخطط تصنيع نهائياً.</p></section>
+    `);
+    document.querySelectorAll('[data-sketchup-open]').forEach(button => button.addEventListener('click', () => {
+      window.open('https://app.sketchup.com/app', '_blank', 'noopener,noreferrer');
+    }));
+    document.querySelectorAll('[data-sketchup-export]').forEach(button => button.addEventListener('click', () => {
+      const project = projects.find(p => p.id === button.dataset.sketchupExport);
+      if (!project) return;
+      const payload = {
+        company: 'محمد أسعد للتنجيد والتصميم الهندسي',
+        export_type: 'project_handoff_brief',
+        note: 'بيانات مرجعية للمصمم؛ ليست ملف SketchUp ولا تتضمن أبعاداً غير مسجلة.',
+        exported_at: new Date().toISOString(),
+        project: {
+          project_no: project.project_no,
+          title: project.title,
+          furniture_type: project.furniture_type,
+          status: statusMap[project.status] || project.status,
+          description: project.description,
+          design_data: project.design_data || {}
+        },
+        surveys: surveys.filter(s => s.project_id === project.id).map(s => ({
+          room_name: s.room_name,
+          length_cm: s.length_cm,
+          width_cm: s.width_cm,
+          height_cm: s.height_cm,
+          notes: s.notes
+        }))
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `project-${project.project_no || 'brief'}-sketchup-brief.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }));
+  } catch(error) { showError(error); }
 }
