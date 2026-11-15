@@ -399,6 +399,29 @@ export function mountCadKernelLab() {
   });
   overlay.querySelector('#cadSofaBuild').addEventListener('click', () => { pendingSofaBuild = false; });
 
+  const createPillowGeometry = (THREE, width, depth, thickness) => {
+    const geometry = new THREE.BufferGeometry();
+    const uSteps = 32, vSteps = 24, positions = [], indices = [];
+    const addSurface = sign => {
+      const start = positions.length / 3;
+      for (let j = 0; j <= vSteps; j++) {
+        const v = -1 + 2 * j / vSteps;
+        for (let i = 0; i <= uSteps; i++) {
+          const u = -1 + 2 * i / uSteps;
+          const crown = Math.pow(Math.max(0, 1-u*u) * Math.max(0, 1-v*v), 0.34);
+          positions.push(width * 0.5 * u, depth * 0.5 * v, sign * thickness * (0.16 + 0.34 * crown));
+        }
+      }
+      for (let j = 0; j < vSteps; j++) for (let i = 0; i < uSteps; i++) {
+        const a = start + j * (uSteps + 1) + i, b = a + 1, c = a + uSteps + 1, d = c + 1;
+        if (sign > 0) indices.push(a,c,b,b,c,d); else indices.push(a,b,c,b,d,c);
+      }
+    };
+    addSurface(1); addSurface(-1);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setIndex(indices); geometry.computeVertexNormals();
+    return geometry;
+  };
   const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
   sofaBuildButton.addEventListener('click', async () => {
     sofaBuildButton.disabled = true;
@@ -443,9 +466,9 @@ export function mountCadKernelLab() {
           part?.category === 'fabric' ? 42 : part?.category === 'foam' ? 58 : 12,
           smallestSide * 0.42
         );
-        const softened = new viewer.RoundedBoxGeometry(
-          Math.max(1, localSize.x), Math.max(1, localSize.y), Math.max(1, localSize.z), 6, cornerRadius
-        );
+        const softened = part?.category === 'fabric'
+          ? createPillowGeometry(viewer.THREE, Math.max(1, localSize.x), Math.max(1, localSize.y), Math.max(1, localSize.z))
+          : new viewer.RoundedBoxGeometry(Math.max(1, localSize.x), Math.max(1, localSize.y), Math.max(1, localSize.z), 8, cornerRadius);
         item.geometry.dispose();
         item.geometry = softened;
         item.position.add(localCenter);
