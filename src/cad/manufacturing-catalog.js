@@ -155,7 +155,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
           <article class="mfg-sheet"><h3>لوح رقم ${i + 1} · ${number(board.width)} × ${number(board.height)} مم</h3>
             <svg viewBox="0 0 ${Math.max(1,number(board.width))} ${Math.max(1,number(board.height))}" role="img" aria-label="مخطط توزيع القطع على اللوح">
               <rect x="0" y="0" width="${number(board.width)}" height="${number(board.height)}" fill="#f7faf8" stroke="#68877a" stroke-width="8"/>
-              ${sheet.placements.map((p, pi) => `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${pi % 2 ? '#dceee8' : '#e8f0e8'}" stroke="#367e70" stroke-width="5"/><text x="${p.x + p.w/2}" y="${p.y + p.h/2}" text-anchor="middle" dominant-baseline="middle" font-size="${Math.max(22,Math.min(64,Math.min(p.w,p.h)/5))}" fill="#234b41">${esc(p.name)}</text>`).join('')}
+              ${sheet.placements.map((p, pi) => { const fs = Math.max(18, Math.min(52, Math.min(p.w, p.h) / 6)); return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${pi % 2 ? '#dceee8' : '#e8f0e8'}" stroke="#367e70" stroke-width="5"/><text x="${p.x + p.w/2}" y="${p.y + p.h/2 - fs*0.35}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" font-weight="700" fill="#234b41">${esc(p.name)}</text><text x="${p.x + p.w/2}" y="${p.y + p.h/2 + fs*0.9}" text-anchor="middle" dominant-baseline="middle" font-size="${Math.max(14, fs*0.72)}" fill="#234b41">${p.w} × ${p.h} مم</text></g>`; }).join('')}
             </svg>
             <p>${sheet.placements.length} قطعة موضوعة · المساحات غير المرسومة متبقية / هدر قص محتمل</p>
           </article>`).join('') || '<p class="muted">أدخل قطعاً صالحة لتظهر خريطة القص.</p>'}
