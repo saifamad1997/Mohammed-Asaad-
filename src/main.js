@@ -471,7 +471,6 @@ async function renderReports() {
   } catch(error){showError(error);}
 }
 
-/* Optional Sweet Home 3D workspace. Kept separate from the native furniture studio. */
 function renderCad2D() {
   setContent('الرسم الهندسي 2D', '<div id="cad2dRoot"></div>');
   sceneCleanup = mountDrafting2D(document.querySelector('#cad2dRoot'));
