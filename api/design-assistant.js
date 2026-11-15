@@ -15,40 +15,52 @@ const SYSTEM_PROMPT = `أنت مساعد التصميم الهندسي والت�
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({error:'الطريقة غير مدعومة.'});
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY;
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  if (!apiKey) return res.status(503).json({error:'مساعد الذكاء الاصطناعي لم يُفعّل بعد. يلزم إضافة OPENAI_API_KEY كمتغير سري في إعدادات Vercel.'});
+  if (!apiKey) return res.status(503).json({error:'مساعد التصميم غير مفعّل. أضف GEMINI_API_KEY كمتغير سري في إعدادات Vercel.'});
   if (!supabaseUrl || !supabaseKey) return res.status(503).json({error:'إعدادات التحقق من حساب الشركة غير مكتملة.'});
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   if (!token) return res.status(401).json({error:'سجّل الدخول أولاً.'});
   try {
-    const verify = await fetch(supabaseUrl.replace(/\/$/, '') + '/auth/v1/user', {headers:{apikey:supabaseKey,Authorization:'Bearer '+token}});
+    const verify = await fetch(supabaseUrl.replace(/\\/$/, '') + '/auth/v1/user', {headers:{apikey:supabaseKey,Authorization:'Bearer '+token}});
     if (!verify.ok) return res.status(401).json({error:'جلسة الدخول غير صالحة. سجّل الدخول من جديد.'});
     const body = req.body || {};
     if (!Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 18) return res.status(400).json({error:'سجل المحادثة غير صالح.'});
     const messages = body.messages.map(m => {
       if (!m || !['user','assistant'].includes(m.role) || typeof m.content !== 'string' || m.content.length > 6000) throw new Error('رسالة غير صالحة.');
-      return {role:m.role,content:m.content};
+      return m;
     });
-    const last = messages[messages.length-1];
-    if (last.role !== 'user' || !last.content.trim()) return res.status(400).json({error:'اكتب رسالتك أولاً.'});
-    const input = messages.slice(0,-1);
-    const image = typeof body.image === 'string' ? body.image : null;
-    if (image) {
-      if (image.length > 7_000_000 || !/^data:image\/(png|jpeg|webp);base64,/.test(image)) return res.status(400).json({error:'الصورة غير مدعومة أو حجمها كبير.'});
-      input.push({role:'user',content:[{type:'input_text',text:last.content},{type:'input_image',image_url:image,detail:'high'}]});
-    } else input.push({role:'user',content:last.content});
-    const ai = await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model:process.env.OPENAI_MODEL || 'gpt-4.1',instructions:SYSTEM_PROMPT,input,max_output_tokens:1400})});
+    const contents = messages.map((m, index) => {
+      const parts = [{text:m.content}];
+      if (index === messages.length - 1 && m.role === 'user' && typeof body.image === 'string') {
+        const match = body.image.match(/^data:image\\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
+        if (!match || body.image.length > 7_000_000) throw new Error('الصورة غير مدعومة أو حجمها كبير.');
+        parts.push({inlineData:{mimeType:'image/'+match[1],data:match[2]}});
+      }
+      return {role:m.role === 'assistant' ? 'model' : 'user',parts};
+    });
+    if (messages[messages.length - 1].role !== 'user' || !messages[messages.length - 1].content.trim() && !body.image) {
+      return res.status(400).json({error:'اكتب رسالتك أو أرفق صورة أولاً.'});
+    }
+    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(apiKey);
+    const ai = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
+      contents,
+      generationConfig:{maxOutputTokens:1400,temperature:0.7}
+    })});
     const result = await ai.json().catch(()=>({}));
     if (!ai.ok) {
-      const detail = result?.error?.message;
-      console.error('OpenAI Responses API error',ai.status,detail||'unknown');
-      return res.status(ai.status===429?429:502).json({error:ai.status===429?'وصل المساعد إلى حد الطلبات مؤقتاً. حاول بعد قليل.':'تعذر على خدمة الذكاء الاصطناعي إكمال الرد. تحقق من إعداد المفتاح والرصيد.'});
+      const detail = result?.error?.message || 'unknown';
+      console.error('Gemini API error',ai.status,detail);
+      if (ai.status === 429) return res.status(429).json({error:'وصل المساعد إلى الحد المجاني للطلبات حالياً. انتظر قليلاً ثم حاول مرة أخرى.'});
+      if (ai.status === 401 || ai.status === 403) return res.status(503).json({error:'مفتاح Gemini غير صالح أو لا يملك صلاحية استخدام هذا النموذج. راجع إعداد GEMINI_API_KEY في Vercel.'});
+      return res.status(502).json({error:'تعذر على Gemini إكمال الرد حالياً. حاول مرة أخرى بعد قليل.'});
     }
-    const reply = (result.output||[]).flatMap(item=>item.content||[]).filter(part=>part.type==='output_text').map(part=>part.text).join('\n').trim();
-    if (!reply) return res.status(502).json({error:'وصل رد فارغ من خدمة الذكاء الاصطناعي.'});
+    const reply = (result.candidates?.[0]?.content?.parts || []).map(part=>part.text || '').join('\\n').trim();
+    if (!reply) return res.status(502).json({error:'وصل رد فارغ من Gemini. حاول صياغة الطلب بطريقة أخرى.'});
     return res.status(200).json({reply});
   } catch (error) {
     console.error('Design assistant error',error);
