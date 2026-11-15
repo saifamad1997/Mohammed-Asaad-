@@ -519,7 +519,7 @@ function renderStudio() {
         <aside class="model-office-panel">
           <div class="model-panel-title"><span>01 / الخصائص</span><h2>بيانات القطعة</h2><p>تحكم بالأبعاد والخامات وشاهد التغييرات مباشرة</p></div>
           <div class="model-office-field"><label for="modelName">اسم التصميم</label><input id="modelName" value="كنبة تجريبية"></div>
-          <div class="model-office-field"><label for="modelType">نوع القطعة</label><select id="modelType"><option value="sofa">كنبة مستقيمة</option><option value="corner">كنبة زاوية L</option><option value="chair">كرسي مفرد</option></select></div>
+          <div class="model-office-field"><label for="modelType">نوع القطعة</label><select id="modelType"><option value="sofa">كنبة مستقيمة</option><option value="corner">كنبة زاوية L</option><option value="chair">كرسي مفرد</option><option value="wardrobe">خزانة ملابس</option><option value="cabinet">خزانة / كومود</option><option value="kitchen">خزانة مطبخ</option><option value="desk">مكتب عمل</option><option value="mirror">مرآة بإطار</option><option value="bed">سرير</option></select></div>
           <div class="model-office-divider"></div>
           <div class="model-panel-subtitle">الأبعاد الهندسية <span>MM</span></div>
           <div class="model-dimension-grid">
@@ -536,7 +536,7 @@ function renderStudio() {
           <div class="model-office-field"><label for="modelFoam">نوع الإسفنج</label><select id="modelFoam"><option value="hr35">HR كثافة 35</option><option value="hr40">HR كثافة 40</option><option value="soft28">ناعم كثافة 28</option><option value="firm45">قاسي كثافة 45</option></select></div>
           <div class="model-office-field"><label for="modelFabric">نوع القماش</label><select id="modelFabric"><option value="linen">كتان منسوج</option><option value="velvet">مخمل</option><option value="chenille">شنيل</option><option value="boucle">بوكلية</option><option value="leather">جلد</option></select></div>
           <div class="model-office-field"><label for="modelSupport">نظام التعليق</label><select id="modelSupport"><option value="webbing">أحزمة تنجيد</option><option value="spring">يايات + أحزمة</option><option value="plywood">قاعدة خشب كونتر</option></select></div>
-          <div class="model-office-actions"><button class="model-action-primary" id="applyModel">⟳ تحديث المجسم</button><div><button id="explodeModel">فصل الأجزاء</button><button id="resetModel">إعادة التجميع</button></div></div>
+          <div class="model-office-actions"><button class="model-action-primary" id="applyModel">⟳ تحديث المجسم</button><div><button id="explodeModel">فصل الأجزاء</button><button id="resetModel">إعادة التجميع</button><button id="resetCamera" type="button">إعادة زاوية العرض</button><button id="exportCutList" type="button">تنزيل قائمة القطع CSV</button></div></div>
           <div class="model-office-divider"></div>
           <div class="model-office-field"><label for="saveProject">ربط التصميم بمشروع</label><select id="saveProject"><option value="">اختر المشروع…</option></select></div>
           <button class="model-save-button" id="saveModel">حفظ التصميم في المشروع <span>↙</span></button>
@@ -574,7 +574,7 @@ async function initStudio() {
   const officePanel=document.querySelector('.model-office-panel');
   const partsBox=document.createElement('div');
   partsBox.className='model-office-field';
-  partsBox.innerHTML='<label>مكونات القطعة — اختر مكوّناً لتعديله</label><div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div><div id="modelPartEditor" class="model-part-editor"><p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p></div>';
+  partsBox.innerHTML='<label>مكونات القطعة — اختر مكوّناً لتعديله</label><div id="modelPartsList" class="model-parts-list"><span>سيتم تحديث القائمة بعد بناء النموذج.</span></div><div id="modelPartEditor" class="model-part-editor"><p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p></div><div id="modelCutSummary" class="model-cut-summary"></div>';
   const dimensionBox=document.createElement('div');
   dimensionBox.className='model-dimension-tools';
   dimensionBox.innerHTML='<button type="button" id="toggleDimensions">إخفاء الأبعاد</button><button type="button" id="loadSavedModel">تحميل تصميم المشروع</button>';
@@ -670,6 +670,63 @@ async function initStudio() {
         mesh.userData.baseScale=mesh.scale.clone();mesh.userData.partSize=mesh.userData.baseSize.clone();
         mesh.userData.originalEmissive=0;group.add(mesh);parts.push(mesh);return mesh;
       };
+      // Parametric casework and furniture families: dimensions are stored in metres, entered in mm.
+      if(['wardrobe','cabinet','kitchen','desk','mirror','bed'].includes(type)){
+        const t=boardKind==='plywood15'?.015:.018;
+        const topY=h-t/2, bottomY=t/2, leftX=-w/2+t/2, rightX=w/2-t/2;
+        const frontZ=d/2-t/2, backZ=-d/2+t/2;
+        if(type==='wardrobe'||type==='cabinet'||type==='kitchen'){
+          const tall=type==='wardrobe', cabinetHeight=h;
+          add('جانب أيسر — لوح '+Math.round(t*1000)+' مم',leftX,cabinetHeight/2,0,t,cabinetHeight,d,board,false);
+          add('جانب أيمن — لوح '+Math.round(t*1000)+' مم',rightX,cabinetHeight/2,0,t,cabinetHeight,d,board,false);
+          add('سقف الخزانة',0,cabinetHeight-t/2,0,w-2*t,t,d,board,false);
+          add('قاعدة الخزانة',0,t/2,0,w-2*t,t,d,board,false);
+          add('ظهر الخزانة',0,cabinetHeight/2,-d/2+t/2,w-2*t,cabinetHeight-2*t,t,board,false);
+          const shelfCount=tall?Math.max(2,Math.min(6,Math.floor(cabinetHeight/.42))):2;
+          for(let i=1;i<=shelfCount;i++)add('رف داخلي '+i,0,(cabinetHeight/(shelfCount+1))*i,0,w-2*t,d-.04,t,board,false);
+          const doorCount=w>1.3?2:1,doorW=(w-t*(doorCount+1))/doorCount;
+          for(let i=0;i<doorCount;i++){
+            const x=-w/2+t+doorW/2+i*(doorW+t);
+            add('باب '+(i+1),x,cabinetHeight/2,frontZ,doorW,cabinetHeight-2*t,t,wood,false);
+            add('مقبض باب '+(i+1),x+(i%2?-.055:.055),cabinetHeight/2,.0+d/2+.018,.018,Math.min(.18,cabinetHeight*.18),.025,metal,false);
+          }
+          if(type==='kitchen'){
+            add('سطح عمل علوي',0,cabinetHeight+.025,0,w+.02,.05,d+.03,wood,false);
+            for(let i=0;i<doorCount;i++)add('واجهة درج علوي '+(i+1),-w/2+(i+.5)*w/doorCount,cabinetHeight*.78,frontZ+.025,w/doorCount-.02,cabinetHeight*.28,.025,wood,false);
+          }
+        }else if(type==='desk'){
+          const topT=Math.max(.025,t);
+          add('سطح المكتب',0,h-topT/2,0,w,topT,d,board,false);
+          const legH=h-topT;
+          for(const x of [-1,1])for(const z of [-1,1])add('رجل مكتب',x*(w/2-.045),legH/2,z*(d/2-.045),.07,legH,.07,wood,false);
+          add('مجرور المكتب',0,h*.72,-d*.22,w*.42,h*.16,d*.42,board,false);
+          add('واجهة المجرور',0,h*.72,d*.01,w*.43,h*.16,.025,wood,false);
+          add('مقبض المجرور',0,h*.72,d*.03,.12,.018,.025,metal,false);
+        }else if(type==='mirror'){
+          const frame=Math.max(.035,Math.min(.09,w*.035));
+          const glass=new THREE.MeshStandardMaterial({color:'#b8d9df',metalness:.78,roughness:.12});
+          add('لوح المرآة العاكس',0,h/2,0,w-2*frame,h-2*frame,.018,glass,false);
+          add('إطار علوي',0,h-frame/2,0,w,frame,.06,wood,false);
+          add('إطار سفلي',0,frame/2,0,w,frame,.06,wood,false);
+          add('إطار أيسر',-w/2+frame/2,h/2,0,frame,h-2*frame,.06,wood,false);
+          add('إطار أيمن',w/2-frame/2,h/2,0,frame,h-2*frame,.06,wood,false);
+        }else if(type==='bed'){
+          add('عارضة سرير أمامية',0,.18,d/2-t/2,w,.28,t,wood,false);
+          add('عارضة سرير خلفية',0,.18,-d/2+t/2,w,.28,t,wood,false);
+          add('جانب سرير أيسر',-w/2+t/2,.18,0,t,.28,d,wood,false);
+          add('جانب سرير أيمن',w/2-t/2,.18,0,t,.28,d,wood,false);
+          add('قاعدة ألواح المرتبة',0,.34,0,w-2*t,.035,d-2*t,board,false);
+          add('مرتبة',0,.48,0,w-2*t,.25,d-2*t,foam);
+          add('لوح رأس السرير',0,h/2,-d/2+t,w,h,t,wood,false);
+        }
+        separated=false;
+        const list=document.querySelector('#modelPartsList');
+        if(list)list.innerHTML=parts.map((p,i)=>'<button type="button" class="model-part-choice" data-part-index="'+i+'" aria-pressed="false"><b>'+(i+1)+'</b> '+esc(p.userData.partName)+'</button>').join('');
+        list?.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
+        selectedPartIndex=-1;
+        const editor=document.querySelector('#modelPartEditor');if(editor)editor.innerHTML='<p>اختر أحد المكونات لتعديل موضعه وأبعاده.</p>';
+        updateCutList();request();return;
+      }
       const legH=Math.max(.11,h*.13),seatY=Math.max(.34,h*.43),seatH=Math.max(.12,h*.17),armW=isChair?.12:.16;
       const railH=.075,railT=.04,frameY=legH+railH/2;
       // Structural timber frame: solid rails, cross braces and plywood deck, all dimensioned in metres.
@@ -732,11 +789,18 @@ async function initStudio() {
       if(list) list.innerHTML=parts.map((p,i)=>'<button type="button" class="model-part-choice" data-part-index="'+i+'" aria-pressed="false"><b>'+(i+1)+'</b> '+esc(p.userData.partName)+'</button>').join('');
       list?.querySelectorAll('[data-part-index]').forEach(button=>button.addEventListener('click',()=>selectPart(Number(button.dataset.partIndex))));
       selectedPartIndex=-1;
+      updateCutList();
       const editor=document.querySelector('#modelPartEditor');
       if(editor) editor.innerHTML='<p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p>';
       request();
     };
     let selectedPartIndex=-1;
+    const updateCutList=()=>{
+      const target=document.querySelector('#modelCutSummary');if(!target)return;
+      const boards=parts.filter(p=>/لوح|رف|باب|سطح|قاعدة|ظهر الخزانة|جانب/.test(p.userData.partName));
+      const area=boards.reduce((sum,p)=>sum+2*(p.userData.partSize.x*p.userData.partSize.y+p.userData.partSize.x*p.userData.partSize.z+p.userData.partSize.y*p.userData.partSize.z),0);
+      target.innerHTML='<strong>حصر مبدئي للمكونات</strong><span>'+parts.length+' مكوّنًا ثلاثي الأبعاد</span><span>'+boards.length+' قطعة ألواح مرشحة</span><span>مساحة سطح تقريبية: '+(area/2).toFixed(2)+' م²</span><small>تقدير هندسي أولي دون تعشيق قص أو هدر أو اعتماد سماكات الوصلات.</small>';
+    };
     const clamp=(id,min,max)=>{const el=document.querySelector('#'+id);const n=Number(el.value);const v=Math.round(Math.max(min,Math.min(max,Number.isFinite(n)?n:min)));el.value=v;return v;};
     const selectPart=index=>{
       const part=parts[index]; if(!part) return;
@@ -785,9 +849,19 @@ async function initStudio() {
       if(hit){const index=parts.indexOf(hit.object);if(index>=0)selectPart(index);}
     });
     document.querySelector('#applyModel').onclick=build;
-    document.querySelector('#modelType').onchange=()=>{const type=document.querySelector('#modelType').value;const chair=type==='chair';document.querySelector('#dimW').value=chair?850:2200;document.querySelector('#dimD').value=type==='corner'?1700:850;document.querySelector('#dimH').value=chair?900:850;document.querySelector('#modelName').value=chair?'كرسي مفرد':type==='corner'?'كنبة زاوية L':'كنبة مستقيمة';build();};
+    document.querySelector('#modelType').onchange=()=>{const type=document.querySelector('#modelType').value;
+      const presets={sofa:[2200,900,850,'كنبة مستقيمة'],corner:[2600,1700,850,'كنبة زاوية L'],chair:[850,850,900,'كرسي مفرد'],wardrobe:[1800,600,2200,'خزانة ملابس'],cabinet:[900,450,900,'خزانة / كومود'],kitchen:[1200,600,900,'خزانة مطبخ'],desk:[1400,700,750,'مكتب عمل'],mirror:[700,60,1800,'مرآة بإطار'],bed:[1600,2000,1200,'سرير']};
+      const [w,d,h,name]=presets[type]||presets.sofa;document.querySelector('#dimW').value=w;document.querySelector('#dimD').value=d;document.querySelector('#dimH').value=h;document.querySelector('#modelName').value=name;build();};
     ['#modelColor','#modelWood','#modelBoard','#modelFoam','#modelFabric','#modelSupport'].forEach(selector=>document.querySelector(selector).onchange=build);
     document.querySelector('#explodeModel').onclick=()=>{if(separated)return;parts.forEach((p,i)=>{p.position.y+=.12+(i%3)*.08;p.position.x+=(i%2?1:-1)*.12;});separated=true;request();};
+    document.querySelector('#resetCamera').onclick=()=>{camera.position.set(3.9,2.65,4.8);controls.target.set(0,.55,0);controls.update();request();};
+    document.querySelector('#exportCutList').onclick=()=>{
+      const rows=[['رقم','المكوّن','X مم','Y مم','Z مم']];
+      parts.forEach((p,i)=>rows.push([i+1,p.userData.partName,...['x','y','z'].map(k=>Math.round(p.userData.partSize[k]*1000))]));
+      const csv='\\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\\r\\n');
+      const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+      const a=document.createElement('a');a.href=url;a.download=(document.querySelector('#modelName').value||'furniture')+'-parts.csv';a.click();URL.revokeObjectURL(url);
+    };
     document.querySelector('#resetModel').onclick=()=>{parts.forEach(p=>{p.position.copy(p.userData.base);p.scale.copy(p.userData.baseScale);});separated=false;request();};
     const applySavedDesign=design=>{
       if(!design || !design.dimensions_mm) return;
