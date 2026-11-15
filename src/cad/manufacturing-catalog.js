@@ -112,16 +112,23 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const W = number(catalog.width), H = number(catalog.height), D = number(catalog.depth);
     const t = number(catalog.board.thickness);
     const parts = catalog.parts.filter(p => number(p.width) > 0 && number(p.height) > 0 && number(p.qty) > 0);
-    return {
-      W, H, D, t,
-      parts: parts.slice(0, 24).map((p, i) => ({
-        name: p.name || 'قطعة',
-        width: number(p.width),
-        height: number(p.height),
-        qty: Math.floor(number(p.qty)),
-        index: i + 1
-      }))
-    };
+    const roleLabel = role => ({ side:'جانب', top:'سقف', bottom:'قاعدة', shelf:'رف', back:'ظهر', door:'باب', drawer:'درج', front:'واجهة', custom:'مخصص' }[role] || 'مخصص');
+    const placed = [];
+    let sideCount = 0, shelfCount = 0, doorCount = 0;
+    parts.slice(0, 36).forEach((p, i) => {
+      const role = p.role || 'custom';
+      const qty = Math.floor(number(p.qty));
+      for (let q = 0; q < qty; q++) {
+        let x = 0, y = 0, z = 0, rot = 0;
+        if (role === 'side') { x = sideCount === 0 ? 0 : Math.max(0, W - t); sideCount++; }
+        else if (role === 'top') y = Math.max(0, H - t);
+        else if (role === 'shelf') { const shelfIndex = shelfCount++; y = Math.min(Math.max(t, H - t - (shelfIndex + 1) * t), Math.max(t, H - 2*t)); x = t; }
+        else if (role === 'back') z = Math.max(0, D - t);
+        else if (role === 'door' || role === 'front') { x = (doorCount++ % 2) ? W / 2 : 0; }
+        placed.push({ name:p.name || 'قطعة', role, roleName:roleLabel(role), width:number(p.width), height:number(p.height), qty:1, index:i+1, instance:q+1, x,y,z,rot });
+      }
+    });
+    return { W,H,D,t,parts:placed };
   }
   function markDirty() { dirty = true; catalog.approved = false; }
   function render() {
@@ -164,8 +171,8 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
         </div>
       </section>
       <section class="section-card mfg-section"><div class="section-heading"><div><h2>3. قائمة القطع</h2><p>أدخل كل قطعة كما يجب أن تُقص، مع العدد والمقاسات الصافية.</p></div><button class="btn btn-primary" data-add-part>＋ إضافة قطعة</button></div>
-        <div class="table-wrap"><table class="mfg-parts"><thead><tr><th>اسم القطعة</th><th>العرض (${unitLabel()})</th><th>الطول (${unitLabel()})</th><th>العدد</th><th>اتجاه العروق</th><th></th></tr></thead><tbody>
-          ${catalog.parts.map(p => `<tr data-part="${esc(p.id)}"><td><input data-part-field="name" value="${esc(p.name)}"></td><td><input type="number" min="1" data-part-field="width" value="${fromMm(p.width)}" step="${displayUnit === 'cm' ? '0.1' : '1'}"></td><td><input type="number" min="1" data-part-field="height" value="${fromMm(p.height)}" step="${displayUnit === 'cm' ? '0.1' : '1'}"></td><td><input type="number" min="1" step="1" data-part-field="qty" value="${number(p.qty)}"></td><td><select data-part-field="grain"><option value="true" ${p.grain !== false ? 'selected' : ''}>ثابت</option><option value="false" ${p.grain === false ? 'selected' : ''}>مسموح تدويرها</option></select></td><td><button class="btn btn-small" data-remove-part="${esc(p.id)}">حذف</button></td></tr>`).join('') || '<tr><td colspan="6" class="empty-cell">أضف القطع المطلوبة لبدء حساب الألواح.</td></tr>'}
+        <div class="table-wrap"><table class="mfg-parts"><thead><tr><th>اسم القطعة</th><th>الدور</th><th>العرض (${unitLabel()})</th><th>الطول (${unitLabel()})</th><th>العدد</th><th>اتجاه العروق</th><th></th></tr></thead><tbody>
+          ${catalog.parts.map(p => `<tr data-part="${esc(p.id)}"><td><input data-part-field="name" value="${esc(p.name)}"></td><td><select data-part-field="role"><option value="custom" ${(p.role||'custom')==='custom'?'selected':''}>مخصص</option><option value="side" ${p.role==='side'?'selected':''}>جانب</option><option value="top" ${p.role==='top'?'selected':''}>سقف</option><option value="bottom" ${p.role==='bottom'?'selected':''}>قاعدة</option><option value="shelf" ${p.role==='shelf'?'selected':''}>رف</option><option value="back" ${p.role==='back'?'selected':''}>ظهر</option><option value="door" ${p.role==='door'?'selected':''}>باب</option><option value="drawer" ${p.role==='drawer'?'selected':''}>درج</option><option value="front" ${p.role==='front'?'selected':''}>واجهة</option></select></td><td><input type="number" min="1" data-part-field="width" value="${fromMm(p.width)}" step="${displayUnit === 'cm' ? '0.1' : '1'}"></td><td><input type="number" min="1" data-part-field="height" value="${fromMm(p.height)}" step="${displayUnit === 'cm' ? '0.1' : '1'}"></td><td><input type="number" min="1" step="1" data-part-field="qty" value="${number(p.qty)}"></td><td><select data-part-field="grain"><option value="true" ${p.grain !== false ? 'selected' : ''}>ثابت</option><option value="false" ${p.grain === false ? 'selected' : ''}>مسموح تدويرها</option></select></td><td><button class="btn btn-small" data-remove-part="${esc(p.id)}">حذف</button></td></tr>`).join('') || '<tr><td colspan="7" class="empty-cell">أضف القطع المطلوبة لبدء حساب الألواح.</td></tr>'}
         </tbody></table></div>
       </section>
       <section class="section-card mfg-section"><div class="section-heading"><div><h2>4. ملخص الألواح وخطة القص الأولية</h2><p>ترتيب مستطيلات أولي يراعي kerf واتجاه العروق المسجل؛ ليس تحسين قص احترافياً معتمداً.</p></div></div>
@@ -206,7 +213,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     root.querySelectorAll('[data-board]').forEach(el => el.addEventListener('change', () => { const key = el.dataset.board; catalog.board[key] = ['width','height','thickness','kerf'].includes(key) ? toMm(el.value) : key === 'available' ? number(el.value) : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-part-field]').forEach(el => el.addEventListener('change', () => { const row = el.closest('[data-part]'); const part = catalog.parts.find(p => p.id === row.dataset.part); const key = el.dataset.partField; part[key] = ['width','height'].includes(key) ? toMm(el.value) : key === 'qty' ? number(el.value) : key === 'grain' ? el.value === 'true' : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-remove-part]').forEach(el => el.onclick = () => { catalog.parts = catalog.parts.filter(p => p.id !== el.dataset.removePart); markDirty(); render(); });
-    root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', width: 0, height: 0, qty: 1, grain: true }); markDirty(); render(); };
+    root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', role: 'custom', width: 0, height: 0, qty: 1, grain: true }); markDirty(); render(); };
     root.querySelector('[data-notes]').addEventListener('change', e => { catalog.notes = e.target.value; markDirty(); });
     root.querySelector('[data-save]').onclick = save;
     root.querySelector('[data-print]').onclick = () => window.print();
