@@ -133,12 +133,13 @@ export function mountCadKernelLab() {
       new THREE.PlaneGeometry(6000, 6000),
       new THREE.MeshStandardMaterial({ color: 0xf5f7f8, roughness: 0.96, metalness: 0 })
     );
-    floor.position.z = -1;
+    // Keep the construction grid strictly below the furniture footprint.
+    floor.position.z = -2;
     floor.receiveShadow = true;
     scene.add(floor);
     const grid = new THREE.GridHelper(5000, 50, 0x82939e, 0xcbd5db);
     grid.rotation.x = Math.PI / 2;
-    grid.position.z = -0.5;
+    grid.position.z = -1.5;
     scene.add(grid);
     const loader = new GLTFLoader();
     const resize = () => {
@@ -160,18 +161,27 @@ export function mountCadKernelLab() {
     render();
     return {
       THREE, RoundedBoxGeometry, scene, camera, controls, loader,
-      fit(object) {
+      fit(object, { sitOnFloor = false } = {}) {
         const bounds = new THREE.Box3().setFromObject(object);
         const size = bounds.getSize(new THREE.Vector3());
         const center = bounds.getCenter(new THREE.Vector3());
-        object.position.sub(center);
+        // A furniture model must sit on Z=0. Centering all three axes puts
+        // half the sofa below the floor/grid, which made the seat and legs vanish.
+        if (sitOnFloor) {
+          object.position.x -= center.x;
+          object.position.y -= center.y;
+          object.position.z -= bounds.min.z;
+        } else {
+          object.position.sub(center);
+        }
+        const targetZ = sitOnFloor ? Math.max(1, size.z * 0.5) : 0;
         const maxDim = Math.max(size.x, size.y, size.z, 1);
-        const distance = maxDim * 1.9;
-        camera.position.set(distance, distance * .72, distance);
+        const distance = maxDim * 2.05;
+        camera.position.set(distance, distance * .82, targetZ + distance * .82);
         camera.near = Math.max(.1, maxDim / 1000);
         camera.far = maxDim * 100;
         camera.updateProjectionMatrix();
-        controls.target.set(0, 0, 0);
+        controls.target.set(0, 0, targetZ);
         controls.update();
       },
       load(url) {
@@ -566,7 +576,7 @@ export function mountCadKernelLab() {
       window.__cadThree = viewer.THREE;
       applyFabricToModel();
       viewer.add(model);
-      viewer.fit(model);
+      viewer.fit(model, { sitOnFloor: true });
       URL.revokeObjectURL(result.url);
       objectUrl = null;
       const partsHost = overlay.querySelector('#cadSofaParts');
