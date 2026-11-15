@@ -14,8 +14,8 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
       version: 1,
       title: '',
       itemType: 'خزانة',
-      width: 1200, height: 2000, depth: 550,
-      board: { material: '', width: 1220, height: 2440, thickness: 18, kerf: 3.2, available: 0, grain: 'locked' },
+      width: 0, height: 0, depth: 0,
+      board: { material: '', width: 0, height: 0, thickness: 0, kerf: 0, available: 0, grain: 'locked' },
       parts: [],
       notes: '',
       approved: false
@@ -53,7 +53,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const bw = number(board.width), bh = number(board.height), kerf = Math.max(0, number(board.kerf));
     if (!(bw > 0 && bh > 0)) return { sheets: [], errors: ['أدخل مقاس اللوح أولاً.'] };
     const parts = [];
-    const errors = [];
+    const errors = [];\n    if (!String(board.material || '').trim()) errors.push('حدد نوع اللوح أو خامته قبل اعتماد الكتالوج.');\n    if (!(number(board.thickness) > 0)) errors.push('أدخل سماكة اللوح الفعلية بالملليمتر.');
     for (const part of catalog.parts) {
       const w = number(part.width), h = number(part.height), qty = Math.floor(number(part.qty));
       if (!(w > 0 && h > 0 && qty > 0)) { errors.push('راجع مقاسات أو كمية القطعة: ' + (part.name || 'بدون اسم')); continue; }
@@ -166,11 +166,11 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     root.querySelectorAll('[data-board]').forEach(el => el.addEventListener('change', () => { const key = el.dataset.board; catalog.board[key] = ['width','height','thickness','kerf','available'].includes(key) ? number(el.value) : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-part-field]').forEach(el => el.addEventListener('change', () => { const row = el.closest('[data-part]'); const part = catalog.parts.find(p => p.id === row.dataset.part); const key = el.dataset.partField; part[key] = ['width','height','qty'].includes(key) ? number(el.value) : key === 'grain' ? el.value === 'true' : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-remove-part]').forEach(el => el.onclick = () => { catalog.parts = catalog.parts.filter(p => p.id !== el.dataset.removePart); markDirty(); render(); });
-    root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', width: 500, height: 500, qty: 1, grain: true }); markDirty(); render(); };
+    root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', width: 0, height: 0, qty: 1, grain: true }); markDirty(); render(); };
     root.querySelector('[data-notes]').addEventListener('change', e => { catalog.notes = e.target.value; markDirty(); });
     root.querySelector('[data-save]').onclick = save;
     root.querySelector('[data-print]').onclick = () => window.print();
-    root.querySelector('[data-approve]').onclick = () => { catalog.approved = true; markDirty(); save(); };
+    root.querySelector('[data-approve]').onclick = () => { markDirty(); catalog.approved = true; save(); };
   }
   async function save() {
     const project = selectedProject();
