@@ -17,7 +17,7 @@ export function nestPanels(parts, stock, options = {}) {
   for (const [index, part] of (parts || []).entries()) {
     const widthMm = positive(part.widthMm, `parts[${index}].widthMm`);
     const heightMm = positive(part.lengthMm, `parts[${index}].lengthMm`);
-    const qty = Math.floor(positive(part.qty ?? 1, `parts[${index}].qty`));
+    const qty = positiveInteger(part.qty ?? 1, `parts[${index}].qty`);
     const partThickness = positive(part.thicknessMm ?? thickness, `parts[${index}].thicknessMm`);
     if (Math.abs(partThickness - thickness) > 0.001) throw new RangeError(`سماكة القطعة "${part.label || index + 1}" لا تطابق سماكة اللوح.`);
     for (let n = 0; n < qty; n++) expanded.push({
@@ -106,5 +106,5 @@ export function nestPanels(parts, stock, options = {}) {
     totalOffcutAreaMm2:results.reduce((s,p)=>s+p.offcuts.reduce((a,o)=>a+o.widthMm*o.lengthMm,0),0)
   };
 }
-function positive(value,name){const n=Number(value);if(!Number.isFinite(n)||n<=0)throw new RangeError(name+' يجب أن يكون رقماً أكبر من صفر.');return n;}
+function positive(value,name){const n=Number(value);if(!Number.isFinite(n)||n<=0)throw new RangeError(name+' يجب أن يكون رقماً أكبر من صفر.');return n;}\nfunction positiveInteger(value,name){const n=positive(value,name);if(!Number.isInteger(n))throw new RangeError(name+' يجب أن يكون عدداً صحيحاً.');return n;}
 function nonNegative(value,name){const n=Number(value);if(!Number.isFinite(n)||n<0)throw new RangeError(name+' يجب ألا يكون سالباً.');return n;}
