@@ -203,6 +203,7 @@ export function mountCadKernelLab() {
     cotton: { label: 'قطن', texture: 'woven', samples: [['أبيض ناصع','#f1f0e9'],['أوف وايت','#e6e0d4'],['بيج','#d0c0a7'],['رمادي فاتح','#c2c5c1'],['رمادي','#8e9693'],['فحمي','#4d5554'],['أسود','#252729'],['أزرق فاتح','#a0b9c6'],['أزرق','#547b9a'],['كحلي','#33465e'],['أخضر فاتح','#a7b39c'],['أخضر غامق','#4b6653'],['أصفر خردلي','#c3a14f'],['وردي','#d1a5a5'],['أحمر','#a94b4d'],['بني','#80614b']] }
   };
   let selectedFabric = { family: 'chenille', name: 'رمادي حجري', color: '#818985' };
+  let activeFabricTexture = null;
   const fabricGrid = overlay.querySelector('#cadFabricGrid');
   const renderFabricSamples = familyKey => {
     const family = fabricFamilies[familyKey] || fabricFamilies.chenille;
@@ -251,10 +252,14 @@ export function mountCadKernelLab() {
     const family = fabricFamilies[selectedFabric.family];
     const THREE = viewerPromise && window.__cadThree;
     if (!THREE) return;
+    // One shared texture is enough for every upholstered component.
+    // The previous implementation allocated a new 256×256 canvas texture
+    // for every mesh on every swatch change, wasting memory on mobile devices.
+    const texture = makeFabricTexture(THREE, selectedFabric.family, selectedFabric.color);
+    if (activeFabricTexture) activeFabricTexture.dispose();
+    activeFabricTexture = texture;
     model.traverse(item => {
       if (!item.isMesh || !item.userData.isUpholstery) return;
-      const texture = makeFabricTexture(THREE, selectedFabric.family, selectedFabric.color);
-      item.material.map?.dispose?.();
       item.material.map = texture;
       item.material.color.set('#ffffff');
       item.material.roughness = family.texture === 'leather' ? 0.42 : family.texture === 'velvet' ? 0.88 : 0.82;
