@@ -6,6 +6,7 @@ import './cad/drafting-2d.css';
 import { renderDesignAssistant } from './cad/design-assistant.js';
 import './cad/design-assistant.css';
 
+window.__maSupabase = supabase;
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['designAssistant','مساعد التصميم الذكي','✧'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
