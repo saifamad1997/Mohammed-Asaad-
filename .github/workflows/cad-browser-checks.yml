@@ -1,0 +1,50 @@
+name: CAD application checks
+
+on:
+  push:
+    branches:
+      - feature/embedded-occt-cad-engine
+  pull_request:
+    branches:
+      - feature/embedded-occt-cad-engine
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Run browser smoke tests
+        run: npx playwright test
+
+      - name: Upload browser report and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cad-browser-test-results
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 7
