@@ -159,7 +159,7 @@ export function mountCadKernelLab() {
     };
     render();
     return {
-      THREE, scene, camera, controls, loader,
+      THREE, RoundedBoxGeometry, scene, camera, controls, loader,
       fit(object) {
         const bounds = new THREE.Box3().setFromObject(object);
         const size = bounds.getSize(new THREE.Vector3());
