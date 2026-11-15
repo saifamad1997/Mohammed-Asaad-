@@ -3,12 +3,13 @@ import { initAuthGate } from './lib/auth-gate.js';
 import './style.css';
 import { mountDrafting2D } from './cad/drafting-2d.js';
 import './cad/drafting-2d.css';
+import { mountPanelPlanner } from './cad/panel-planner-ui.js';
 
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
   ['studio','مكتب التصميم 3D','◇'],['cad2d','الرسم الهندسي 2D','⌗'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
-  ['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
+  ['orders','أوامر التصنيع','⚒'],['panel-planner','مخطط قص الألواح','▧'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥'],['sweet-home-3d','Sweet Home 3D','⌂']
 ];
 let currentPage = 'dashboard';
@@ -148,7 +149,7 @@ function navigate(page) {
   const routes = {
     dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects,
     studio: renderStudio, cad2d: renderCad2D, 'sweet-home-3d': renderSweetHome3D, surveys: renderSurveys, materials: renderMaterials,
-    orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
+    orders: renderOrders, 'panel-planner': renderPanelPlanner, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
   routes[page]();
 }
@@ -505,6 +506,11 @@ function renderSweetHome3D() {
 function renderCad2D() {
   setContent('الرسم الهندسي 2D', '<div id="cad2dRoot"></div>');
   sceneCleanup = mountDrafting2D(document.querySelector('#cad2dRoot'));
+}
+
+function renderPanelPlanner() {
+  setContent('مخطط قص الألواح', '<div id="panelPlannerRoot"></div>');
+  sceneCleanup = mountPanelPlanner(document.querySelector('#panelPlannerRoot'));
 }
 
 /* 3D studio: an editable concept model, explicitly not certified manufacturing CAD. */
