@@ -107,11 +107,16 @@ export function mountCadKernelLab() {
     const { GLTFLoader } = loaderModule;
     const scene = new THREE.Scene();
     scene.background = new THREE.Color('#e8eef2');
+    // OCCT furniture dimensions are X=width, Y=depth, Z=height.
+    // Keep the Three.js scene Z-up so the model, floor grid and dimensions agree.
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 50000);
+    camera.up.set(0, 0, 1);
     camera.position.set(1400, 1100, 1500);
     renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setSize(viewport.clientWidth, viewport.clientHeight);
     viewport.innerHTML = '';
     viewport.appendChild(renderer.domElement);
@@ -120,10 +125,20 @@ export function mountCadKernelLab() {
     controls.target.set(0, 0, 0);
     scene.add(new THREE.HemisphereLight(0xffffff, 0x73808a, 2.1));
     const key = new THREE.DirectionalLight(0xffffff, 2.5);
-    key.position.set(1200, 1800, 1400);
+    key.position.set(1200, 1800, 2400);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
     scene.add(key);
+    const floor = new THREE.Mesh(
+      new THREE.PlaneGeometry(6000, 6000),
+      new THREE.MeshStandardMaterial({ color: 0xf5f7f8, roughness: 0.96, metalness: 0 })
+    );
+    floor.position.z = -1;
+    floor.receiveShadow = true;
+    scene.add(floor);
     const grid = new THREE.GridHelper(5000, 50, 0x82939e, 0xcbd5db);
-    grid.position.y = -0.5;
+    grid.rotation.x = Math.PI / 2;
+    grid.position.z = -0.5;
     scene.add(grid);
     const loader = new GLTFLoader();
     const resize = () => {
@@ -399,27 +414,81 @@ export function mountCadKernelLab() {
   });
   overlay.querySelector('#cadSofaBuild').addEventListener('click', () => { pendingSofaBuild = false; });
 
-  const createPillowGeometry = (THREE, width, depth, thickness) => {
+  const createPillowGeometry = (THREE, width, depth, thickness, thicknessAxis = 'z') => {
+    // Closed, softly crowned cushion mesh. Seat cushions bulge on Z; back cushions
+    // bulge toward the user on Y. Side walls close the mesh for reliable lighting.
     const geometry = new THREE.BufferGeometry();
-    const uSteps = 32, vSteps = 24, positions = [], indices = [];
-    const addSurface = sign => {
+    const uSteps = 40, vSteps = 28, positions = [], indices = [], uvs = [];
+    const surfaceStarts = [];
+    const pointAt = (u, v, sign) => {
+      const crown = Math.pow(Math.max(0, 1-u*u) * Math.max(0, 1-v*v), 0.38);
+      const bulge = sign * thickness * (0.13 + 0.37 * crown);
+      if (thicknessAxis === 'y') return [width * 0.5 * u, bulge, depth * 0.5 * v];
+      return [width * 0.5 * u, depth * 0.5 * v, bulge];
+    };
+    const boundary = [];
+    for (let i=0;i<=uSteps;i++) boundary.push(i);
+    for (let j=1;j<=vSteps;j++) boundary.push(j*(uSteps+1)+uSteps);
+    for (let i=uSteps-1;i>=0;i--) boundary.push(vSteps*(uSteps+1)+i);
+    for (let j=vSteps-1;j>0;j--) boundary.push(j*(uSteps+1));
+    for (const sign of [1,-1]) {
       const start = positions.length / 3;
-      for (let j = 0; j <= vSteps; j++) {
-        const v = -1 + 2 * j / vSteps;
-        for (let i = 0; i <= uSteps; i++) {
-          const u = -1 + 2 * i / uSteps;
-          const crown = Math.pow(Math.max(0, 1-u*u) * Math.max(0, 1-v*v), 0.34);
-          positions.push(width * 0.5 * u, depth * 0.5 * v, sign * thickness * (0.16 + 0.34 * crown));
+      surfaceStarts.push(start);
+      for (let j=0;j<=vSteps;j++) {
+        const v=-1+2*j/vSteps;
+        for (let i=0;i<=uSteps;i++) {
+          const u=-1+2*i/uSteps;
+          positions.push(...pointAt(u,v,sign));
+          uvs.push((u+1)/2,(v+1)/2);
         }
       }
-      for (let j = 0; j < vSteps; j++) for (let i = 0; i < uSteps; i++) {
-        const a = start + j * (uSteps + 1) + i, b = a + 1, c = a + uSteps + 1, d = c + 1;
-        if (sign > 0) indices.push(a,c,b,b,c,d); else indices.push(a,b,c,b,d,c);
+      for (let j=0;j<vSteps;j++) for (let i=0;i<uSteps;i++) {
+        const a=start+j*(uSteps+1)+i, b=a+1, c=a+uSteps+1, d=c+1;
+        if ((sign>0) === (thicknessAxis==='z')) indices.push(a,c,b,b,c,d);
+        else indices.push(a,b,c,b,d,c);
       }
-    };
-    addSurface(1); addSurface(-1);
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geometry.setIndex(indices); geometry.computeVertexNormals();
+    }
+    const topStart=surfaceStarts[0], bottomStart=surfaceStarts[1];
+    for (let k=0;k<boundary.length;k++) {
+      const next=(k+1)%boundary.length;
+      const a=topStart+boundary[k], b=topStart+boundary[next];
+      const c=bottomStart+boundary[k], d=bottomStart+boundary[next];
+      indices.push(a,b,c,b,d,c);
+    }
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
+    geometry.computeBoundingSphere();
+    return geometry;
+  };
+
+  const createArmGeometry = (THREE, width, depth, height) => {
+    // Sculpted upholstered arm: a softly tapered elliptical section swept along depth.
+    const geometry = new THREE.BufferGeometry();
+    const along=32, around=40, positions=[], indices=[], uvs=[];
+    for(let j=0;j<=along;j++) {
+      const t=j/along;
+      const endSoft=Math.sin(Math.PI*(0.08+0.84*t));
+      const swell=0.94+0.06*endSoft;
+      const rx=width*0.49*swell, rz=height*0.49*swell;
+      for(let i=0;i<=around;i++) {
+        const a=2*Math.PI*i/around;
+        const cs=Math.cos(a), sn=Math.sin(a);
+        const sx=Math.sign(cs)*Math.pow(Math.abs(cs),0.82);
+        const sz=Math.sign(sn)*Math.pow(Math.abs(sn),0.82);
+        positions.push(width*0.5+sx*rx,depth*t,height*0.5+sz*rz);
+        uvs.push(i/around,t);
+      }
+    }
+    for(let j=0;j<along;j++) for(let i=0;i<around;i++) {
+      const a=j*(around+1)+i,b=a+1,c=a+around+1,d=c+1;
+      indices.push(a,b,c,b,d,c);
+    }
+    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+    geometry.setIndex(indices);
+    geometry.computeVertexNormals();
     return geometry;
   };
   const sofaBuildButton = overlay.querySelector('#cadSofaBuild');
@@ -466,9 +535,22 @@ export function mountCadKernelLab() {
           part?.category === 'fabric' ? 42 : part?.category === 'foam' ? 58 : 12,
           smallestSide * 0.42
         );
-        const softened = part?.category === 'fabric'
-          ? createPillowGeometry(viewer.THREE, Math.max(1, localSize.x), Math.max(1, localSize.y), Math.max(1, localSize.z))
-          : new viewer.RoundedBoxGeometry(Math.max(1, localSize.x), Math.max(1, localSize.y), Math.max(1, localSize.z), 8, cornerRadius);
+        const partSize = {
+          x: Math.max(1, localSize.x),
+          y: Math.max(1, localSize.y),
+          z: Math.max(1, localSize.z)
+        };
+        const softened = part?.id?.startsWith('arm-')
+          ? createArmGeometry(viewer.THREE, partSize.x, partSize.y, partSize.z)
+          : part?.category === 'fabric'
+            ? createPillowGeometry(
+                viewer.THREE,
+                partSize.x,
+                part?.id?.startsWith('back-cushion-') ? partSize.z : partSize.y,
+                part?.id?.startsWith('back-cushion-') ? partSize.y : partSize.z,
+                part?.id?.startsWith('back-cushion-') ? 'y' : 'z'
+              )
+            : new viewer.RoundedBoxGeometry(partSize.x, partSize.y, partSize.z, 10, cornerRadius);
         item.geometry.dispose();
         item.geometry = softened;
         item.position.add(localCenter);
