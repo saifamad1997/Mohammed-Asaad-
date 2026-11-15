@@ -536,7 +536,8 @@ async function renderSketchup() {
           furniture_type: project.furniture_type,
           status: statusMap[project.status] || project.status,
           description: project.description,
-          design_data: project.design_data || {}
+          design_data: project.design_data || {},
+          manufacturing_catalog: project.design_data?.manufacturing_catalog || null
         },
         surveys: surveys.filter(s => s.project_id === project.id).map(s => ({
           room_name: s.room_name,
