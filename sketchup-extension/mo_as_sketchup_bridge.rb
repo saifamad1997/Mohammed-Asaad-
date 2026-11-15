@@ -21,6 +21,8 @@ module MohammedAsaad
     end
 
     def import_project
+      model = nil
+      operation_started = false
       path = UI.openpanel('اختر ملف مشروع الشركة JSON', '', 'JSON Files|*.json||')
       return unless path
 
@@ -38,6 +40,7 @@ module MohammedAsaad
 
       model = Sketchup.active_model
       model.start_operation('استيراد مشروع محمد أسعد', true)
+      operation_started = true
       root = model.entities.add_group
       root.name = safe_name("مشروع #{project['project_no']} - #{project['title']}")
       root.set_attribute(DICT, 'source', 'MohammedAsaad project JSON')
@@ -96,11 +99,12 @@ module MohammedAsaad
 
       raise 'لم يتم إنشاء أي قطع صالحة.' if created.zero?
       model.commit_operation
+      operation_started = false
       model.active_view.zoom_extents
       UI.messagebox("تم استيراد #{created} مكوّناً.
 هذه معاينة ألواح منفصلة حسب قائمة القص، وليست تجميعاً نهائياً للأثاث.")
     rescue StandardError => e
-      model.abort_operation if model && model.active_operation?
+      model.abort_operation if model && operation_started
       UI.messagebox("تعذر الاستيراد:\n#{e.message}")
     end
 
