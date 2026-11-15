@@ -44,19 +44,31 @@ export default async function handler(req, res) {
     if (messages[messages.length - 1].role !== 'user' || !messages[messages.length - 1].content.trim() && !body.image) {
       return res.status(400).json({error:'اكتب رسالتك أو أرفق صورة أولاً.'});
     }
-    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(apiKey);
-    const ai = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+    const requestBody = JSON.stringify({
       systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
       contents,
       generationConfig:{maxOutputTokens:1400,temperature:0.7}
-    })});
-    const result = await ai.json().catch(()=>({}));
+    });
+    const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
+    const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+    async function callGemini(model) {
+      const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(apiKey);
+      const response = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:requestBody});
+      const data = await response.json().catch(()=>({}));
+      return {response,data,model};
+    }
+    let attempt = await callGemini(primaryModel);
+    if (!attempt.response.ok && attempt.response.status === 503 && fallbackModel && fallbackModel !== primaryModel) {
+      console.warn('Primary Gemini model unavailable; trying fallback model',primaryModel,fallbackModel);
+      attempt = await callGemini(fallbackModel);
+    }
+    const {response:ai,data:result,model:usedModel} = attempt;
     if (!ai.ok) {
       const detail = result?.error?.message || 'unknown';
-      console.error('Gemini API error',ai.status,detail);
-      if (ai.status === 429) return res.status(429).json({error:'وصل المساعد إلى الحد المجاني للطلبات حالياً. انتظر قليلاً ثم حاول مرة أخرى.'});
-      if (ai.status === 401 || ai.status === 403) return res.status(503).json({error:'مفتاح Gemini غير صالح أو لا يملك صلاحية استخدام هذا النموذج. راجع إعداد GEMINI_API_KEY في Vercel.'});
+      console.error('Gemini API error',usedModel,ai.status,detail);
+      if (ai.status === 429) return res.status(429).json({error:'وصل المساعد إلى حد الطلبات المتاح حالياً. انتظر قليلاً ثم حاول مرة أخرى.'});
+      if (ai.status === 401 || ai.status === 403) return res.status(503).json({error:'مفتاح Gemini غير صالح أو لا يملك صلاحية استخدام النموذج. راجع إعداد GEMINI_API_KEY في Vercel.'});
+      if (ai.status === 503) return res.status(503).json({error:'خدمة Gemini مشغولة حالياً، وحتى النموذج الاحتياطي لم يتمكن من الرد. انتظر قليلاً ثم أعد المحاولة.'});
       return res.status(502).json({error:'تعذر على Gemini إكمال الرد حالياً. حاول مرة أخرى بعد قليل.'});
     }
     const reply = (result.candidates?.[0]?.content?.parts || []).map(part=>part.text || '').join('\\n').trim();
