@@ -31,16 +31,13 @@ export default async function handler(req, res) {
       uses: 1,
       expireTime: new Date(now + 30 * 60 * 1000).toISOString(),
       newSessionExpireTime: new Date(now + 60 * 1000).toISOString(),
-      liveConnectConstraints: {
-        model: model,
-        config: {
-          responseModalities: ['AUDIO'],
-          temperature: 0.45,
-          systemInstruction: { parts: [{ text: LIVE_SYSTEM_INSTRUCTION }] },
-          inputAudioTranscription: {},
-          outputAudioTranscription: {},
-          sessionResumption: {}
-        }
+      bidiGenerateContentSetup: {
+        model: 'models/' + model,
+        generationConfig: { responseModalities: ['AUDIO'], temperature: 0.45 },
+        systemInstruction: { parts: [{ text: LIVE_SYSTEM_INSTRUCTION }] },
+        inputAudioTranscription: {},
+        outputAudioTranscription: {},
+        sessionResumption: {}
       }
     };
     const response = await fetch('https://generativelanguage.googleapis.com/v1beta/auth_tokens', {
