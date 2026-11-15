@@ -44,7 +44,7 @@ export default async function handler(req, res) {
     if (messages[messages.length - 1].role !== 'user' || !messages[messages.length - 1].content.trim() && !body.image) {
       return res.status(400).json({error:'اكتب رسالتك أو أرفق صورة أولاً.'});
     }
-    const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
     const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(apiKey);
     const ai = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
       systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
