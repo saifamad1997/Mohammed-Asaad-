@@ -63,6 +63,155 @@ export function renderDesignAssistant() {
     } else history.forEach(m=>addMessage(m.role,m.content,m.preview));
   }
   paint();
+
+  function setVoiceStatus(message, active = false) {
+    voiceStatus.hidden = false;
+    voiceStatus.textContent = message;
+    voiceButton.setAttribute('aria-pressed', String(active));
+    voiceButton.textContent = active ? '⏹ إيقاف الصوت' : '🎙️ محادثة صوتية';
+  }
+  function pcm16Base64(floatSamples, sourceRate) {
+    const ratio = sourceRate / 16000;
+    const length = Math.floor(floatSamples.length / ratio);
+    const pcm = new Int16Array(length);
+    for (let i = 0; i < length; i++) {
+      const sample = floatSamples[Math.min(floatSamples.length - 1, Math.floor(i * ratio))] || 0;
+      const clipped = Math.max(-1, Math.min(1, sample));
+      pcm[i] = clipped < 0 ? clipped * 32768 : clipped * 32767;
+    }
+    const bytes = new Uint8Array(pcm.buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + 0x8000, bytes.length)));
+    return btoa(binary);
+  }
+  function playVoiceChunk(base64) {
+    if (!voiceContext) return;
+    const binary = atob(base64);
+    const pcm = new Int16Array(binary.length / 2);
+    for (let i = 0; i < pcm.length; i++) pcm[i] = (binary.charCodeAt(i * 2) & 255) | (binary.charCodeAt(i * 2 + 1) << 8);
+    const samples = new Float32Array(pcm.length);
+    for (let i = 0; i < pcm.length; i++) samples[i] = pcm[i] / 32768;
+    const buffer = voiceContext.createBuffer(1, samples.length, 24000);
+    buffer.copyToChannel(samples, 0);
+    const source = voiceContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(voiceContext.destination);
+    const startAt = Math.max(voiceContext.currentTime + 0.03, voicePlaybackAt);
+    source.start(startAt);
+    voicePlaybackAt = startAt + buffer.duration;
+    voiceSources.push(source);
+    source.onended = () => { voiceSources = voiceSources.filter(item => item !== source); };
+  }
+  function stopVoicePlayback() {
+    voiceSources.forEach(source => { try { source.stop(); } catch {} });
+    voiceSources = [];
+    voicePlaybackAt = voiceContext?.currentTime || 0;
+  }
+  function stopVoice() {
+    if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+      try { voiceSocket.send(JSON.stringify({ realtimeInput: { audioStreamEnd: true } })); } catch {}
+    }
+    try { voiceProcessor?.disconnect(); } catch {}
+    try { voiceSource?.disconnect(); } catch {}
+    try { voiceMute?.disconnect(); } catch {}
+    voiceProcessor = voiceSource = voiceMute = null;
+    if (voiceStream) voiceStream.getTracks().forEach(track => track.stop());
+    voiceStream = null;
+    if (voiceSocket) {
+      voiceSocket.onclose = null;
+      try { voiceSocket.close(); } catch {}
+    }
+    voiceSocket = null;
+    stopVoicePlayback();
+    if (voiceContext) { try { voiceContext.close(); } catch {} }
+    voiceContext = null;
+    voiceStarting = false;
+    setVoiceStatus('المحادثة الصوتية متوقفة', false);
+  }
+  async function startVoice() {
+    if (voiceStarting) return;
+    voiceStarting = true;
+    setVoiceStatus('نطلب إذن الميكروفون ونجهّز الاتصال…');
+    try {
+      if (!navigator.mediaDevices?.getUserMedia || !window.WebSocket) throw new Error('المتصفح لا يدعم المحادثة الصوتية. افتح الموقع بمتصفح حديث وعلى اتصال آمن.');
+      voiceStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      voiceContext = new (window.AudioContext || window.webkitAudioContext)();
+      await voiceContext.resume();
+      const { data: sessionData, error: sessionError } = await window.__maSupabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw new Error('انتهت جلسة الدخول. سجّل الدخول من جديد.');
+      const tokenResponse = await fetch('/api/design-assistant-live-token', { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken } });
+      const tokenData = await tokenResponse.json().catch(() => ({}));
+      if (!tokenResponse.ok || !tokenData.token) throw new Error(tokenData.error || 'تعذر بدء المحادثة الصوتية.');
+      const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained?access_token=' + encodeURIComponent(tokenData.token);
+      voiceSocket = new WebSocket(wsUrl);
+      voiceSocket.onopen = () => {
+        voiceSocket.send(JSON.stringify({
+          setup: {
+            model: 'models/' + tokenData.model,
+            generationConfig: { responseModalities: ['AUDIO'], temperature: 0.45 },
+            systemInstruction: { parts: [{ text: 'تحدث بالعربية باللهجة الأردنية الخفيفة. أنت مساعد التصميم الهندسي لشركة محمد أسعد. كن مختصراً وطبيعياً، واسأل سؤالاً واحداً عند الحاجة. لا تخترع قياسات أو مواصفات.' }] },
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
+            realtimeInputConfig: { automaticActivityDetection: { disabled: false } }
+          }
+        }));
+        setVoiceStatus('تم الاتصال؛ ننتظر تجهيز الصوت…', true);
+      };
+      voiceSocket.onmessage = event => {
+        let message;
+        try { message = JSON.parse(event.data); } catch { return; }
+        if (message.setupComplete) {
+          const source = voiceContext.createMediaStreamSource(voiceStream);
+          const processor = voiceContext.createScriptProcessor(4096, 1, 1);
+          const mute = voiceContext.createGain();
+          mute.gain.value = 0;
+          processor.onaudioprocess = audioEvent => {
+            if (!voiceSocket || voiceSocket.readyState !== WebSocket.OPEN) return;
+            const data = pcm16Base64(audioEvent.inputBuffer.getChannelData(0), voiceContext.sampleRate);
+            voiceSocket.send(JSON.stringify({ realtimeInput: { audio: { data, mimeType: 'audio/pcm;rate=16000' } } }));
+          };
+          source.connect(processor);
+          processor.connect(mute);
+          mute.connect(voiceContext.destination);
+          voiceSource = source;
+          voiceProcessor = processor;
+          voiceMute = mute;
+          setVoiceStatus('أنا بسمعك… احكي براحتك', true);
+        }
+        const server = message.serverContent;
+        if (server?.interrupted) stopVoicePlayback();
+        if (server?.inputTranscription?.text) addMessage('user', server.inputTranscription.text);
+        if (server?.outputTranscription?.text) addMessage('assistant', server.outputTranscription.text);
+        for (const part of (server?.modelTurn?.parts || [])) {
+          if (part.inlineData?.data && String(part.inlineData.mimeType || '').startsWith('audio/pcm')) playVoiceChunk(part.inlineData.data);
+        }
+        if (server?.turnComplete) setVoiceStatus('تفضل، أنا بسمعك…', true);
+        if (message.goAway) setVoiceStatus('الاتصال الصوتي يقترب من نهايته؛ أوقفه وابدأ جلسة جديدة عند الحاجة.', true);
+      };
+      voiceSocket.onerror = () => {
+        setVoiceStatus('تعذر الاتصال الصوتي. تأكد من إعداد Gemini Live وحاول لاحقاً.');
+        stopVoice();
+      };
+      voiceSocket.onclose = () => {
+        if (voiceSocket) {
+          setVoiceStatus('انتهى الاتصال الصوتي. يمكنك بدء محادثة جديدة.');
+          stopVoice();
+        }
+      };
+    } catch (error) {
+      stopVoice();
+      setVoiceStatus(error?.message || 'تعذر تشغيل الميكروفون.');
+    } finally {
+      voiceStarting = false;
+    }
+  }
+  voiceButton.addEventListener('click', () => {
+    if (voiceStarting || voiceSocket || voiceStream) stopVoice();
+    else startVoice();
+  });
+
   root.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{input.value=button.dataset.prompt;input.focus();}));
   root.querySelector('#assistantClear').addEventListener('click',()=>{stopVoice();history=[];pendingImage=null;attachment.hidden=true;attachment.textContent='';saveHistory();paint();});
   imageInput.addEventListener('change',()=>{
