@@ -3,10 +3,12 @@ import { initAuthGate } from './lib/auth-gate.js';
 import './style.css';
 import { mountDrafting2D } from './cad/drafting-2d.js';
 import './cad/drafting-2d.css';
+import { renderDesignAssistant } from './cad/design-assistant.js';
+import './cad/design-assistant.css';
 
 const app = document.querySelector('#app');
 const navItems = [
-  ['dashboard','لوحة المعلومات','⌂'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
+  ['dashboard','لوحة المعلومات','⌂'],['designAssistant','مساعد التصميم الذكي','✧'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
   ['cad2d','الرسم الهندسي 2D','⌗'],['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
   ['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥']
@@ -146,7 +148,7 @@ function navigate(page) {
     return;
   }
   const routes = {
-    dashboard: renderDashboard, customers: renderCustomers, projects: renderProjects,
+    dashboard: renderDashboard, designAssistant: renderDesignAssistant, customers: renderCustomers, projects: renderProjects,
     cad2d: renderCad2D, sketchup: renderSketchup, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
