@@ -11,7 +11,7 @@ export function mountCadKernelLab() {
         <div><span class="cad-kernel-kicker">OPEN CASCADE / WEBASSEMBLY</span><h2 id="cadKernelTitle">المهندس الذكي 3D</h2><p>مساحة التصميم الهندسي الذكي داخل نظام الشركة</p></div>
         <button type="button" class="cad-kernel-close" aria-label="إغلاق">×</button>
       </header>
-      <div class="cad-kernel-notice"><strong>مرحلة تطوير — لا تعتمد مخرجاتها للتصنيع بعد</strong><span>يُنشئ المحرك جسماً هندسياً B-Rep بأبعاد مدخلة بالملليمتر، ثم يصدره إلى GLB لعرضه داخل هذه النافذة. هذه الخطوة تثبت ربط النواة، ولا تعني أن مكتبة الأثاث أو ملفات التصنيع اكتملت.</span></div>
+      <div class="cad-kernel-notice"><strong>مرحلة تطوير — لا تعتمد مخرجاتها للتصنيع بعد</strong><span>أدخل أبعاد الأثاث بالسنتيمتر؛ يحولها النظام تلقائيًا إلى ملليمتر قبل إنشاء الأجسام الهندسية داخل Open CASCADE.</span></div>
       <section class="cad-voice-panel" aria-labelledby="cadVoiceTitle">
         <div class="cad-voice-heading"><div><b id="cadVoiceTitle">تحدّث مع المهندس الذكي</b><span>أوامر صوتية أو كتابية باللغة العربية</span></div><span class="cad-voice-state" id="cadVoiceState">جاهز</span></div>
         <div class="cad-voice-actions">
@@ -27,9 +27,9 @@ export function mountCadKernelLab() {
       <div class="cad-sofa-section">
         <div class="cad-sofa-heading"><div><b>أول نموذج أثاث — كنبة مستقيمة</b><span>تكوين مبدئي من قطع B-Rep مستقلة ينشئها محرك Open CASCADE</span></div><span class="cad-sofa-count">خشب · إسفنج · قماش · أرجل</span></div>
         <div class="cad-sofa-controls">
-          <label>العرض الكلي (مم)<input id="cadSofaWidth" type="number" min="500" max="4000" value="2200"></label>
-          <label>العمق الكلي (مم)<input id="cadSofaDepth" type="number" min="500" max="4000" value="900"></label>
-          <label>الارتفاع الكلي (مم)<input id="cadSofaHeight" type="number" min="500" max="4000" value="850"></label>
+          <label>الطول الكلي (سم)<input id="cadSofaWidth" type="number" min="50" max="400" step="1" value="220"></label>
+          <label>العرض / العمق (سم)<input id="cadSofaDepth" type="number" min="50" max="400" step="1" value="90"></label>
+          <label>الارتفاع الكلي (سم)<input id="cadSofaHeight" type="number" min="50" max="400" step="1" value="85"></label>
           <label>عدد المقاعد<select id="cadSofaSeats"><option value="2">مقعدين</option><option value="3" selected>3 مقاعد</option><option value="4">4 مقاعد</option></select></label>
           <button type="button" id="cadSofaBuild" class="cad-kernel-build">إنشاء الكنبة بالمحرك الهندسي</button>
         </div>
@@ -395,7 +395,7 @@ export function mountCadKernelLab() {
     const match = text.match(new RegExp('(?:' + names + ')[^0-9]{0,12}(\\d+(?:\\.\\d+)?)'));
     if (!match) return null;
     const value = Number(match[1]);
-    return /(?:سم|سنتيمتر|centimeters?|cm)/i.test(text) ? value * 10 : value;
+    return /(?:مم|ملليمتر|millimeters?|mm)/i.test(text) ? value / 10 : value;
   };
   voiceSend.addEventListener('click', () => {
     const request = normalizeArabicDigits(voiceInput.value.trim());
@@ -411,7 +411,7 @@ export function mountCadKernelLab() {
       if (height) overlay.querySelector('#cadSofaHeight').value = height;
       if (seatsMatch) overlay.querySelector('#cadSofaSeats').value = Math.max(2, Math.min(4, Number(seatsMatch[1])));
       pendingSofaBuild = true;
-      const changed = [width && 'العرض ' + width + ' مم', depth && 'العمق ' + depth + ' مم', height && 'الارتفاع ' + height + ' مم'].filter(Boolean);
+      const changed = [width && 'الطول ' + width + ' سم', depth && 'العمق ' + depth + ' سم', height && 'الارتفاع ' + height + ' سم'].filter(Boolean);
       sayReply(changed.length
         ? 'فهمت أنك تريد كنبة. جهزت المقاسات التالية: ' + changed.join('، ') + '. راجع الحقول ثم اضغط «إنشاء الكنبة بالمحرك الهندسي» لتأكيد إنشاء المعاينة.'
         : 'فهمت أنك تريد تصميم كنبة. حدد العرض والعمق والارتفاع وعدد المقاعد في حقول الكنبة، ثم اضغط زر إنشاء الكنبة.');
@@ -507,9 +507,9 @@ export function mountCadKernelLab() {
     buildButton.disabled = true;
     try {
       const dimensions = {
-        width: Number(overlay.querySelector('#cadSofaWidth').value),
-        depth: Number(overlay.querySelector('#cadSofaDepth').value),
-        height: Number(overlay.querySelector('#cadSofaHeight').value),
+        width: Number(overlay.querySelector('#cadSofaWidth').value) * 10,
+        depth: Number(overlay.querySelector('#cadSofaDepth').value) * 10,
+        height: Number(overlay.querySelector('#cadSofaHeight').value) * 10,
         seats: Number(overlay.querySelector('#cadSofaSeats').value)
       };
       const viewer = await (viewerPromise ||= ensureViewer());
