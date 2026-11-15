@@ -54,6 +54,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     if (!(bw > 0 && bh > 0)) return { sheets: [], errors: ['أدخل مقاس اللوح أولاً.'] };
     const parts = [];
     const errors = [];
+    if (!(number(catalog.width) > 0 && number(catalog.height) > 0 && number(catalog.depth) > 0)) errors.push('أدخل أبعاد قطعة الأثاث الخارجية كاملة قبل اعتمادها.');
     if (!String(board.material || '').trim()) errors.push('حدد نوع اللوح أو خامته قبل اعتماد الكتالوج.');
     if (!(number(board.thickness) > 0)) errors.push('أدخل سماكة اللوح الفعلية بالملليمتر.');
     for (const part of catalog.parts) {
@@ -61,6 +62,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
       if (!(w > 0 && h > 0 && qty > 0)) { errors.push('راجع مقاسات أو كمية القطعة: ' + (part.name || 'بدون اسم')); continue; }
       for (let i = 0; i < qty; i++) parts.push({ name: part.name || 'قطعة', width: w, height: h, grain: part.grain !== false, sourceId: part.id, index: i + 1 });
     }
+    if (!parts.length) errors.push('أضف قطعة واحدة على الأقل إلى قائمة القص.');
     parts.sort((a, b) => b.width * b.height - a.width * a.height);
     const sheets = [];
     for (const part of parts) {
@@ -172,7 +174,14 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     root.querySelector('[data-notes]').addEventListener('change', e => { catalog.notes = e.target.value; markDirty(); });
     root.querySelector('[data-save]').onclick = save;
     root.querySelector('[data-print]').onclick = () => window.print();
-    root.querySelector('[data-approve]').onclick = () => { markDirty(); catalog.approved = true; save(); };
+    root.querySelector('[data-approve]').onclick = () => {
+      const check = computeLayout();
+      if (check.errors.length || !catalog.parts.length) {
+        alert('لا يمكن اعتماد الكتالوج بعد. راجع التنبيهات وأكمل أبعاد الأثاث واللوح والقطع أولاً.');
+        return;
+      }
+      markDirty(); catalog.approved = true; save();
+    };
   }
   async function save() {
     const project = selectedProject();
@@ -181,9 +190,10 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     if (button) { button.disabled = true; button.textContent = 'جارٍ الحفظ…'; }
     try {
       const nextDesignData = { ...(project.design_data || {}), manufacturing_catalog: { ...catalog, updated_at: new Date().toISOString() } };
-      const { error } = await supabase.from('projects').update({ design_data: nextDesignData }).eq('id', project.id).eq('owner_id', user.id);
+      const { data, error } = await supabase.from('projects').update({ design_data: nextDesignData }).eq('id', project.id).eq('owner_id', user.id).select('id,design_data').single();
       if (error) throw error;
-      project.design_data = nextDesignData;
+      if (!data || data.id !== project.id || !data.design_data?.manufacturing_catalog) throw new Error('لم يتم تأكيد حفظ بيانات الكتالوج في المشروع. تحقق من صلاحيات قاعدة البيانات.');
+      project.design_data = data.design_data;
       dirty = false;
       render();
     } catch (error) {
