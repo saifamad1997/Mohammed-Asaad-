@@ -732,6 +732,7 @@ async function initStudio() {
     const resize=()=>{if(!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);request();};
     const observer=new ResizeObserver(resize);observer.observe(host);
     const build=()=>{
+      group.visible=true;libraryGroup.visible=false;
       for(const p of [...group.children]){group.remove(p);p.geometry.dispose();p.material.dispose();}
       parts=[]; const w=clamp('dimW',100,5000)/1000,d=clamp('dimD',100,3000)/1000,h=clamp('dimH',100,3000)/1000;
       const type=document.querySelector('#modelType').value;
