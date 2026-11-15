@@ -144,7 +144,7 @@ export function renderDesignAssistant() {
       const tokenResponse = await fetch('/api/design-assistant-live-token', { method: 'POST', headers: { Authorization: 'Bearer ' + accessToken } });
       const tokenData = await tokenResponse.json().catch(() => ({}));
       if (!tokenResponse.ok || !tokenData.token) throw new Error(tokenData.error || 'تعذر بدء المحادثة الصوتية.');
-      const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained?access_token=' + encodeURIComponent(tokenData.token);
+      const wsUrl = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContentConstrained?access_token=' + encodeURIComponent(tokenData.token);
       voiceSocket = new WebSocket(wsUrl);
       voiceSocket.onopen = () => {
         voiceSocket.send(JSON.stringify({
