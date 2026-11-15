@@ -125,7 +125,9 @@ export async function createSofaAssemblyPreview({ width = 2200, depth = 900, hei
     const seatY = leg + 45;
     const seatDepth = Math.max(500, p.depth - 285);
     add(`seat-cushion-${i+1}`,`وسادة المقعد ${i+1}`,'fabric','قماش',x,seatY,leg+railHeight+24,cushionWidth,seatDepth,seatThickness);
-    add(`back-cushion-${i+1}`,`وسادة الظهر ${i+1}`,'fabric','قماش',x,p.depth-cushionDepth-20,backBase+12,cushionWidth,cushionDepth,backHeight-24);
+    // Place back cushions on the sitting side of the back support, not behind it.
+    const backCushionY = p.depth - 135 - cushionDepth - 10;
+    add(`back-cushion-${i+1}`,`وسادة الظهر ${i+1}`,'fabric','قماش',x,backCushionY,backBase+12,cushionWidth,cushionDepth,backHeight-24);
   }
 
   const oc = await loadCadKernel(onProgress);
