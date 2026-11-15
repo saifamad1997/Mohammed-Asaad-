@@ -533,11 +533,49 @@ export function mountCadKernelLab() {
       const gltf = await viewer.load(result.url);
       model = gltf.scene;
       const palette = { wood: 0x805b3f, foam: 0xd7c7a5, fabric: 0xffffff, metal: 0x34434d };
-      let meshIndex = 0;
+      // Match each exported GLTF mesh to its source OCCT part by its
+      // measured world-space bounds. Traversal order is not a stable identity:
+      // exporters may reorder nodes, which previously applied the wrong
+      // upholstery/material geometry to unrelated components.
+      const unmatchedParts = new Set(result.parts);
+      const matchPartFromBounds = mesh => {
+        mesh.updateWorldMatrix(true, false);
+        const bounds = new viewer.THREE.Box3().setFromObject(mesh);
+        const size = bounds.getSize(new viewer.THREE.Vector3());
+        const center = bounds.getCenter(new viewer.THREE.Vector3());
+        let best = null;
+        let bestScore = Infinity;
+        for (const candidate of unmatchedParts) {
+          const expectedSize = [candidate.width, candidate.depth, candidate.height];
+          const expectedCenter = [
+            candidate.x + candidate.width / 2,
+            candidate.y + candidate.depth / 2,
+            candidate.z + candidate.height / 2
+          ];
+          const actualSize = [size.x, size.y, size.z];
+          const actualCenter = [center.x, center.y, center.z];
+          const sizeError = actualSize.reduce((sum, value, index) =>
+            sum + Math.abs(value - expectedSize[index]) / Math.max(1, expectedSize[index]), 0);
+          const centerError = actualCenter.reduce((sum, value, index) =>
+            sum + Math.abs(value - expectedCenter[index]) / Math.max(100, expectedSize[index]), 0);
+          const score = sizeError + centerError;
+          if (score < bestScore) {
+            best = candidate;
+            bestScore = score;
+          }
+        }
+        if (best && bestScore < 0.35) unmatchedParts.delete(best);
+        return best && bestScore < 0.35 ? best : null;
+      };
       model.traverse(item => {
         if (!item.isMesh) return;
-        const part = result.parts[Math.min(meshIndex, result.parts.length - 1)];
-        item.userData.isUpholstery = part?.category === 'fabric' || part?.category === 'foam';
+        const part = matchPartFromBounds(item);
+        if (!part) {
+          console.warn('تعذر مطابقة مجسم GLTF مع قطعة OCCT معروفة؛ سيُترك دون تغيير تجميلي.', item.name);
+          return;
+        }
+        item.userData.cadPartId = part.id;
+        item.userData.isUpholstery = part.category === 'fabric' || part.category === 'foam';
         // Keep OCCT dimensions/solids as the engineering source, but render each
         // visible component with softened, furniture-like radii instead of sharp toy blocks.
         item.geometry.computeBoundingBox();
@@ -575,7 +613,6 @@ export function mountCadKernelLab() {
         });
         item.castShadow = true;
         item.receiveShadow = true;
-        meshIndex++;
       });
       window.__cadThree = viewer.THREE;
       applyFabricToModel();
