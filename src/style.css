@@ -456,3 +456,17 @@ tbody tr:hover{background:#f7faff}
  .auth-action-feedback{text-align:center;margin:0 0 8px}
  .top-actions{flex-wrap:wrap}
 }
+
+
+/* Furniture studio: component summary and responsive manufacturing preview tools */
+.model-cut-summary{display:grid;gap:5px;margin-top:10px;padding:11px;background:#102027;border:1px solid #31515a;border-radius:9px;color:#dcebec}
+.model-cut-summary strong{font-size:10px;color:#83ddd5}
+.model-cut-summary span{font-size:9px;color:#c0d0d2}
+.model-cut-summary small{font-size:8px;line-height:1.7;color:#8fa7aa}
+.model-office-actions>div{grid-template-columns:repeat(2,minmax(0,1fr))}
+.model-office-actions>button,.model-office-actions>div>button{min-height:36px}
+.model-office-actions button:disabled{opacity:.55;cursor:wait}
+@media(max-width:560px){
+  .model-office-actions>div{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .model-office-actions>div>button{font-size:9px;padding:9px 5px}
+}
