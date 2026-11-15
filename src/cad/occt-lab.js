@@ -474,29 +474,35 @@ export function mountCadKernelLab() {
   };
 
   const createArmGeometry = (THREE, width, depth, height) => {
-    // Sculpted upholstered arm: a softly tapered elliptical section swept along depth.
+    // Upholstered arm with a rounded/tapered profile, centered around its local
+    // origin so the original OCCT part position remains the exact placement.
     const geometry = new THREE.BufferGeometry();
-    const along=32, around=40, positions=[], indices=[], uvs=[];
-    for(let j=0;j<=along;j++) {
-      const t=j/along;
-      const endSoft=Math.sin(Math.PI*(0.08+0.84*t));
-      const swell=0.94+0.06*endSoft;
-      const rx=width*0.49*swell, rz=height*0.49*swell;
-      for(let i=0;i<=around;i++) {
-        const a=2*Math.PI*i/around;
-        const cs=Math.cos(a), sn=Math.sin(a);
-        const sx=Math.sign(cs)*Math.pow(Math.abs(cs),0.82);
-        const sz=Math.sign(sn)*Math.pow(Math.abs(sn),0.82);
-        positions.push(width*0.5+sx*rx,depth*t,height*0.5+sz*rz);
-        uvs.push(i/around,t);
+    const along = 36, around = 32, positions = [], indices = [], uvs = [];
+    for (let j = 0; j <= along; j++) {
+      const t = j / along;
+      const y = (t - 0.5) * depth;
+      const endRadius = 0.88 + 0.12 * Math.sin(Math.PI * t);
+      const rx = width * 0.50 * endRadius;
+      const rz = height * 0.50 * (0.94 + 0.06 * Math.sin(Math.PI * t));
+      for (let i = 0; i <= around; i++) {
+        const a = (Math.PI * 2 * i) / around;
+        const cs = Math.cos(a), sn = Math.sin(a);
+        // Slightly flatter inner/outer side profile than a raw ellipse.
+        const sx = Math.sign(cs) * Math.pow(Math.abs(cs), 0.86);
+        const sz = Math.sign(sn) * Math.pow(Math.abs(sn), 0.86);
+        positions.push(sx * rx, y, sz * rz);
+        uvs.push(i / around, t);
       }
     }
-    for(let j=0;j<along;j++) for(let i=0;i<around;i++) {
-      const a=j*(around+1)+i,b=a+1,c=a+around+1,d=c+1;
-      indices.push(a,b,c,b,d,c);
+    for (let j = 0; j < along; j++) {
+      for (let i = 0; i < around; i++) {
+        const a = j * (around + 1) + i;
+        const b = a + 1, c = a + around + 1, d = c + 1;
+        indices.push(a, b, c, b, d, c);
+      }
     }
-    geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-    geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geometry.setIndex(indices);
     geometry.computeVertexNormals();
     return geometry;
