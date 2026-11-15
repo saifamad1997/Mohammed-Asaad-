@@ -24,7 +24,7 @@ export default async function handler(req, res) {
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
   if (!token) return res.status(401).json({error:'سجّل الدخول أولاً.'});
   try {
-    const verify = await fetch(supabaseUrl.replace(/\\/$/, '') + '/auth/v1/user', {headers:{apikey:supabaseKey,Authorization:'Bearer '+token}});
+    const verify = await fetch((supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl) + '/auth/v1/user', {headers:{apikey:supabaseKey,Authorization:'Bearer '+token}});
     if (!verify.ok) return res.status(401).json({error:'جلسة الدخول غير صالحة. سجّل الدخول من جديد.'});
     const body = req.body || {};
     if (!Array.isArray(body.messages) || body.messages.length < 1 || body.messages.length > 18) return res.status(400).json({error:'سجل المحادثة غير صالح.'});
