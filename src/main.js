@@ -580,6 +580,20 @@ async function initStudio() {
   dimensionBox.innerHTML='<button type="button" id="toggleDimensions">إخفاء الأبعاد</button><button type="button" id="loadSavedModel">تحميل تصميم المشروع</button>';
   officePanel?.insertBefore(partsBox, officePanel.querySelector('.model-office-note'));
   officePanel?.insertBefore(dimensionBox, officePanel.querySelector('.model-office-note'));
+  const assistantBox=document.createElement('section');
+  assistantBox.className='model-ai-assistant';
+  assistantBox.innerHTML=`<div class="model-ai-heading"><span>02 / مساعد التصميم</span><strong>اكتب طلبك ونفّذه على المجسم</strong></div>
+  <p>اكتب المطلوب بالكلام العادي، ويمكنك إدخال القياسات بالسنتيمتر أو المليمتر.</p>
+  <textarea id="modelAiPrompt" rows="4" placeholder="مثال: صمّم كنبة زاوية عرضها 280 سم وعمقها 90 سم وارتفاعها 85 سم"></textarea>
+  <button type="button" class="model-action-primary" id="runModelAi">تنفيذ الطلب على التصميم</button>
+  <div id="modelAiFeedback" role="status" aria-live="polite">بانتظار تعليماتك.</div>
+  <div class="model-ai-cost"><strong>حاسبة تكلفة أولية</strong>
+  <label>سعر متر القماش (د.أ)<input id="aiFabricRate" type="number" min="0" step="0.01" placeholder="أدخل سعر المتر"></label>
+  <label>أجرة التصنيع (د.أ)<input id="aiLaborRate" type="number" min="0" step="0.01" placeholder="أدخل أجرة العمل"></label>
+  <button type="button" id="calculateModelCost">احسب التقدير</button>
+  <output id="modelCostOutput">أدخل الأسعار لحساب تقدير مبدئي. لا يُعدّ قائمة قص معتمدة.</output></div>`;
+  officePanel?.insertBefore(assistantBox, officePanel.querySelector('.model-office-note'));
+
   host.style.position='relative';
   const dimensionOverlay=document.createElement('div');
   dimensionOverlay.className='model-dimension-overlay';
@@ -735,6 +749,42 @@ async function initStudio() {
       const editor=document.querySelector('#modelPartEditor');
       if(editor) editor.innerHTML='<p>اختر أحد المكونات لعرض أبعاده وتعديل موضعه.</p>';
       request();
+    };
+
+    const aiPrompt=document.querySelector('#modelAiPrompt');
+    const aiFeedback=document.querySelector('#modelAiFeedback');
+    const runAiRequest=()=>{
+      const raw=(aiPrompt?.value||'').trim();
+      if(!raw){aiFeedback.textContent='اكتب وصف القطعة والقياسات أولاً.';return;}
+      const normalized=raw.replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g,'.');
+      const findDimension=pattern=>{const m=normalized.match(pattern);if(!m)return null;const value=Number(m[1]);return Number.isFinite(value)&&value>0?{value,unit:m[2]||'cm'}:null;};
+      const width=findDimension(/(?:عرض|العرض|طول|الطول)\\s*(?:ها|ه)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
+      const depth=findDimension(/(?:عمق|العمق)\\s*(?:ها|ه)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
+      const height=findDimension(/(?:ارتفاع|الارتفاع)\\s*(?:ها|ه)?\\s*[:=]?\\s*(\\d+(?:\\.\\d+)?)\\s*(سم|سنتيمتر|cm|مم|ملم|mm)?/i);
+      const toMm=item=>item?Math.round(item.value*(/^(?:مم|ملم|mm)$/i.test(item.unit)?1:10)):null;
+      let type=null;
+      if(/كنبة\\s*(?:زاوية|ركنة)|زاوية\\s*l|\\bL\\b/i.test(normalized))type='corner';
+      else if(/كرسي|مقعد\\s*مفرد/i.test(normalized))type='chair';
+      else if(/كنبة|صوفا|أريكة/i.test(normalized))type='sofa';
+      if(type)document.querySelector('#modelType').value=type;
+      if(width)document.querySelector('#dimW').value=toMm(width);
+      if(depth)document.querySelector('#dimD').value=toMm(depth);
+      if(height)document.querySelector('#dimH').value=toMm(height);
+      if(type||width||depth||height){
+        if(type)document.querySelector('#modelName').value=type==='corner'?'كنبة زاوية L':type==='chair'?'كرسي مفرد':'كنبة مستقيمة';
+        build();
+        const applied=[type?'نوع القطعة':null,width?'العرض '+toMm(width)+' مم':null,depth?'العمق '+toMm(depth)+' مم':null,height?'الارتفاع '+toMm(height)+' مم':null].filter(Boolean);
+        aiFeedback.textContent='تم تطبيق: '+applied.join('، ')+'. راجع المجسم. لم أغيّر أي قياس لم تذكره.';
+      }else aiFeedback.textContent='لم أتعرف على أمر قابل للتطبيق. اذكر نوع القطعة والقياسات مثل: العرض 220 سم، العمق 90 سم، الارتفاع 85 سم.';
+    };
+    document.querySelector('#runModelAi').onclick=runAiRequest;
+    aiPrompt?.addEventListener('keydown',event=>{if((event.ctrlKey||event.metaKey)&&event.key==='Enter')runAiRequest();});
+    document.querySelector('#calculateModelCost').onclick=()=>{
+      const rate=Number(document.querySelector('#aiFabricRate').value),labor=Number(document.querySelector('#aiLaborRate').value),out=document.querySelector('#modelCostOutput');
+      if(!(rate>0)||document.querySelector('#aiFabricRate').value===''||!(labor>=0)||document.querySelector('#aiLaborRate').value===''){out.textContent='أدخل سعر متر القماش وأجرة التصنيع.';return;}
+      const w=Number(document.querySelector('#dimW').value)/100,d=Number(document.querySelector('#dimD').value)/100,h=Number(document.querySelector('#dimH').value)/100;
+      const fabricArea=Math.max(.5,(2*w*d+2*w*h+2*d*h)*.72),fabricCost=fabricArea*rate;
+      out.textContent='تقدير مساحة القماش الحسابية '+fabricArea.toFixed(2)+' م²؛ تكلفة القماش '+fabricCost.toFixed(2)+' د.أ؛ مع أجرة التصنيع '+labor.toFixed(2)+' د.أ = '+(fabricCost+labor).toFixed(2)+' د.أ. لا يشمل بقية المواد والهدر، وليس تسعيرًا نهائيًا.';
     };
     let selectedPartIndex=-1;
     const clamp=(id,min,max)=>{const el=document.querySelector('#'+id);const n=Number(el.value);const v=Math.round(Math.max(min,Math.min(max,Number.isFinite(n)?n:min)));el.value=v;return v;};
