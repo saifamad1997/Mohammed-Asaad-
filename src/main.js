@@ -509,10 +509,13 @@ async function renderSketchup() {
     setContent('SketchUp', `
       <section class="sketchup-intro">
         <div><span class="welcome-kicker">مساحة التصميم ثلاثي الأبعاد الخارجية</span><h2>اربط ملفات SketchUp بمشاريع الشركة</h2>
-        <p>افتح SketchUp Web، ثم افتح ملف المشروع بصيغة SKP من جهازك. بعد الانتهاء احفظ نسخة SKP على جهازك واحتفظ بها ضمن ملفات المشروع.</p></div>
-        <a class="btn btn-primary" href="https://app.sketchup.com/app" target="_blank" rel="noopener noreferrer">تشغيل SketchUp Web ↗</a>
+        <p>للكمبيوتر: ثبّت إضافة جسر الشركة داخل SketchUp Desktop ثم استورد ملف JSON لتوليد مكونات ألواح منفصلة. للويب: افتح ملفات SKP أو صيغ 3D المدعومة حسب اشتراكك.</p></div>
+        <div class="sketchup-actions">
+          <a class="btn btn-primary" href="https://app.sketchup.com/app" target="_blank" rel="noopener noreferrer">تشغيل SketchUp Web ↗</a>
+          <a class="btn" href="https://github.com/saifamad1997/Mohammed-Asaad-/tree/feature/sketchup-workflow/sketchup-extension" target="_blank" rel="noopener noreferrer">ملفات إضافة الكمبيوتر ↗</a>
+        </div>
       </section>
-      <section class="notice-card"><strong>طريقة الربط الحالية</strong><p>هذه وصلة تشغيل وتسليم بيانات المشروع، وليست محرر SketchUp مضمّناً داخل النظام. ملفات SKP تُفتح وتُحفظ من SketchUp نفسه؛ لا تُرفع تلقائياً إلى قاعدة بيانات الشركة في هذه المرحلة.</p></section>
+      <section class="notice-card"><strong>حدود الإصدار الأول</strong><p>إضافة الكمبيوتر تنشئ حالياً مكونات منفصلة من أبعاد قائمة القص وسماكة اللوح. لا تنشئ بعد خزانة مركبة أو مواقع ثقوب ومفصلات وسكك؛ يلزم إضافة بيانات التموضع والتجميع لكل نوع أثاث قبل اعتماد رسومات الورشة. ملفات SKP لا تُرفع تلقائياً إلى قاعدة بيانات الشركة.</p></section>
       <section class="section-card">
         <div class="section-heading"><div><h2>مشاريع الشركة</h2><p>اختر المشروع لتجهيز بياناته وقياساته قبل العمل عليه في SketchUp.</p></div></div>
         <div class="sketchup-project-grid">${cards || '<div class="empty-state"><h3>لا توجد مشاريع بعد</h3><p>أنشئ مشروعاً أولاً من قسم المشاريع ليظهر هنا.</p></div>'}</div>
