@@ -4,7 +4,7 @@
 One installable, responsive application for desktop and mobile. One URL, one sign-in, one shared project and data model. Modern Arabic RTL interface with professional CAD-style tools and command access.
 
 ## Main workflow
-Customers → Projects → Survey & Measurements → CAD / 3D Design Office → Materials & Inventory → Manufacturing Orders → Production Tracking → Delivery → Reports & Accounts.
+Customers → Projects → Survey & Measurements → CAD 2D → Materials & Inventory → Manufacturing Orders → Production Tracking → Delivery → Reports & Accounts.
 
 ## Required workspaces
 - Dashboard and company settings
@@ -12,10 +12,6 @@ Customers → Projects → Survey & Measurements → CAD / 3D Design Office → 
 - Projects, quotes, revisions, approvals and attachments
 - Room surveys and measured site conditions
 - CAD 2D: drawing canvas, layers, snaps, grids, dimensions, annotations, blocks, orthographic views, sections and export
-- 3D modeling: parametric parts, assemblies, materials, component tree, explode/reassemble with stable transforms, measurement tools, camera/orbit and live dimension updates
-- Furniture design: sofas, chairs, beds, wardrobes, kitchens, cabinets, doors, drawers and custom items
-- Interior / architectural layouts
-- Mechanical and metal fabrication design
 - Materials, stock, suppliers, purchasing and stock movements
 - Manufacturing orders separated by carpentry, metalwork and upholstery
 - Production stages, quality checks, delivery and installation
@@ -43,7 +39,7 @@ RLS is enabled on all six. Current tables are empty and use owner_id linked to a
 These are preserved as source/reference material, not treated as a complete CAD editor. Check each asset's license and attribution requirements before redistributing or embedding it.
 
 ## Existing starter code
-The feature/3d-engineering-office branch contains the Vite + Three.js application shell, Supabase browser client, sign-in gate, responsive styling and an early 3D prototype. Reuse selectively; replace prototype-only behavior as real modules are implemented.
+The company workspace retains its 2D drafting tools and operational management sections. No 3D design office is included.
 
 ## Release safety
 Do not delete old Vercel projects, deployments, domains, source snapshots or Supabase resources until the new unified app is built, verified on phone and desktop, data access is tested, and the production domain is safely switched. Then clean up only confirmed redundant resources.
