@@ -35,7 +35,7 @@ export default async function handler(req, res) {
     const contents = messages.map((m, index) => {
       const parts = [{text:m.content}];
       if (index === messages.length - 1 && m.role === 'user' && typeof body.image === 'string') {
-        const match = body.image.match(/^data:image\\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
+        const match = body.image.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
         if (!match || body.image.length > 7_000_000) throw new Error('الصورة غير مدعومة أو حجمها كبير.');
         parts.push({inlineData:{mimeType:'image/'+match[1],data:match[2]}});
       }
