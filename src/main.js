@@ -597,7 +597,7 @@ function renderStudio() {
         </main>
       </div>
     </section>
-    <section class="model-reference-links"><div><h3>مكتبة المراجع</h3><p>روابط المكتبات المحفوظة داخل النظام</p></div><div class="legacy-links"><a href="/archive/legacy/library-3d.html" target="_blank" rel="noopener">مكتبة موديلات 3D ↗</a><a href="/library.html" target="_blank" rel="noopener">مكتبة الخامات ↗</a><a href="/archive/legacy/showroom-2026.html" target="_blank" rel="noopener">معرض الأثاث ↗</a></div></section>
+    <section class="model-reference-links"><div><h3>مكتبة المراجع</h3><p>نماذج أثاث مرخّصة ومعاينتها داخل مكتب التصميم</p></div><div class="legacy-links"><a href="/library.html" target="_blank" rel="noopener">فتح مكتبة موديلات الأثاث CC0 ↗</a><button type="button" id="importLatestLibraryModel" class="model-action-primary">استيراد آخر موديل اخترته</button><a href="/archive/legacy/library-3d.html" target="_blank" rel="noopener">مكتبة موديلات إضافية ↗</a><a href="/archive/legacy/showroom-2026.html" target="_blank" rel="noopener">معرض الأثاث ↗</a></div></section>
   `);
   initStudio();
 }
@@ -700,6 +700,35 @@ async function initStudio() {
     const rimLight=new THREE.DirectionalLight(0xdceeff,1.1);rimLight.position.set(1,4,-5);scene.add(rimLight);
     const floor=new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({color:'#d5d1ca',roughness:.94}));floor.rotation.x=-Math.PI/2;floor.position.y=-.04;floor.receiveShadow=true;scene.add(floor);
     const group=new THREE.Group();scene.add(group);
+    const libraryGroup=new THREE.Group();scene.add(libraryGroup);
+    const loadLatestLibraryModel=async()=>{
+      let saved=[];try{saved=JSON.parse(localStorage.getItem('ma_selected_furniture')||'[]');}catch{}
+      const asset=saved[saved.length-1];
+      if(!asset?.id){alert('افتح مكتبة موديلات الأثاث واختر نموذجاً ثم اضغط «إضافة إلى قائمة التصميم» أولاً.');return;}
+      const button=document.querySelector('#importLatestLibraryModel');if(button){button.disabled=true;button.textContent='جارٍ استيراد النموذج…';}
+      try{
+        const [{GLTFLoader},response]=await Promise.all([import('three/addons/loaders/GLTFLoader.js'),fetch('/api/polyhaven-files?id='+encodeURIComponent(asset.id))]);
+        if(!response.ok)throw new Error('تعذر جلب ملفات النموذج من المكتبة.');
+        const files=await response.json();const levels=files.gltf||{};const entry=levels['1k']?.gltf||levels['2k']?.gltf||levels['4k']?.gltf;
+        if(!entry?.url)throw new Error('ملف GLB/GLTF غير متوفر لهذا النموذج.');
+        const gltf=await new GLTFLoader().loadAsync(entry.url);
+        while(libraryGroup.children.length){const old=libraryGroup.children[0];libraryGroup.remove(old);old.traverse?.(node=>{node.geometry?.dispose?.();if(Array.isArray(node.material))node.material.forEach(m=>m.dispose?.());else node.material?.dispose?.();});}
+        const imported=gltf.scene;libraryGroup.add(imported);imported.updateMatrixWorld(true);
+        const bounds=new THREE.Box3().setFromObject(imported);const size=bounds.getSize(new THREE.Vector3());const center=bounds.getCenter(new THREE.Vector3());
+        if(size.x<=0||size.y<=0||size.z<=0)throw new Error('أبعاد النموذج غير صالحة للعرض.');
+        imported.position.sub(center);const dims=asset.dimensions_mm||[2200,850,900];
+        const targetW=Math.max(100,Number(dims[0])||2200)/1000,targetH=Math.max(100,Number(dims[1])||850)/1000,targetD=Math.max(100,Number(dims[2])||900)/1000;
+        imported.scale.set(targetW/size.x,targetH/size.y,targetD/size.z);imported.updateMatrixWorld(true);
+        const fitted=new THREE.Box3().setFromObject(imported);imported.position.y-=fitted.min.y;
+        imported.traverse(node=>{if(node.isMesh){node.castShadow=true;node.receiveShadow=true;}});
+        group.visible=false;libraryGroup.visible=true;document.querySelector('#modelName').value=asset.name||'موديل من مكتبة الأثاث';
+        document.querySelector('#pageSubtitle').textContent='معاينة موديل مرخّص من Poly Haven — إعادة التحجيم هنا للعرض فقط';
+        const max=Math.max(targetW,targetH,targetD);camera.position.set(max*2.5,max*1.8,max*2.7);controls.target.set(0,targetH*.48,0);controls.update();request();
+        alert('تم استيراد '+(asset.name||'النموذج')+' إلى مساحة العرض. التحجيم بصري فقط ولا يمثل قياسات تصنيع معتمدة.');
+      }catch(error){console.error('Furniture library import failed',error);alert(error?.message||'تعذر استيراد النموذج.');}
+      finally{if(button){button.disabled=false;button.textContent='استيراد آخر موديل اخترته';}}
+    };
+    document.querySelector('#importLatestLibraryModel')?.addEventListener('click',loadLatestLibraryModel);
     const resize=()=>{if(!renderer)return;const w=host.clientWidth,h=host.clientHeight;if(!w||!h)return;camera.aspect=w/h;camera.updateProjectionMatrix();renderer.setSize(w,h,false);request();};
     const observer=new ResizeObserver(resize);observer.observe(host);
     const build=()=>{
