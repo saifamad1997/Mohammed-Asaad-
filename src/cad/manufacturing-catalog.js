@@ -53,7 +53,9 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const bw = number(board.width), bh = number(board.height), kerf = Math.max(0, number(board.kerf));
     if (!(bw > 0 && bh > 0)) return { sheets: [], errors: ['أدخل مقاس اللوح أولاً.'] };
     const parts = [];
-    const errors = [];\n    if (!String(board.material || '').trim()) errors.push('حدد نوع اللوح أو خامته قبل اعتماد الكتالوج.');\n    if (!(number(board.thickness) > 0)) errors.push('أدخل سماكة اللوح الفعلية بالملليمتر.');
+    const errors = [];
+    if (!String(board.material || '').trim()) errors.push('حدد نوع اللوح أو خامته قبل اعتماد الكتالوج.');
+    if (!(number(board.thickness) > 0)) errors.push('أدخل سماكة اللوح الفعلية بالملليمتر.');
     for (const part of catalog.parts) {
       const w = number(part.width), h = number(part.height), qty = Math.floor(number(part.qty));
       if (!(w > 0 && h > 0 && qty > 0)) { errors.push('راجع مقاسات أو كمية القطعة: ' + (part.name || 'بدون اسم')); continue; }
