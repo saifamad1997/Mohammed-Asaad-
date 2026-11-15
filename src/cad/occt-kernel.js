@@ -120,7 +120,11 @@ export async function createSofaAssemblyPreview({ width = 2200, depth = 900, hei
   const cushionWidth = (usableWidth - (p.seats - 1) * 14) / p.seats;
   for (let i=0;i<p.seats;i++) {
     const x = arm + 40 + i * (cushionWidth + 14);
-    add(`seat-cushion-${i+1}`,`وسادة المقعد ${i+1}`,'fabric','قماش',x,leg+railHeight+24,leg+railHeight+24,cushionWidth,p.depth-190,seatThickness);
+    // Seat cushion must stay inside the usable seat depth; the old p.depth-190
+    // value extended a 90 cm sofa cushion beyond the back of the sofa.
+    const seatY = leg + 45;
+    const seatDepth = Math.max(500, p.depth - 285);
+    add(`seat-cushion-${i+1}`,`وسادة المقعد ${i+1}`,'fabric','قماش',x,seatY,leg+railHeight+24,cushionWidth,seatDepth,seatThickness);
     add(`back-cushion-${i+1}`,`وسادة الظهر ${i+1}`,'fabric','قماش',x,p.depth-cushionDepth-20,backBase+12,cushionWidth,cushionDepth,backHeight-24);
   }
 
