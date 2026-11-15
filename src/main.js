@@ -5,13 +5,15 @@ import { mountDrafting2D } from './cad/drafting-2d.js';
 import './cad/drafting-2d.css';
 import { renderDesignAssistant } from './cad/design-assistant.js';
 import './cad/design-assistant.css';
+import { mountManufacturingCatalog } from './cad/manufacturing-catalog.js';
+import './cad/manufacturing-catalog.css';
 
 window.__maSupabase = supabase;
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['designAssistant','مساعد التصميم الذكي','✧'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
   ['cad2d','الرسم الهندسي 2D','⌗'],['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
-  ['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
+  ['manufacturing','كتالوج التصنيع','▧'],['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥']
 ];
 let currentPage = 'dashboard';
@@ -150,7 +152,7 @@ function navigate(page) {
   }
   const routes = {
     dashboard: renderDashboard, designAssistant: renderDesignAssistant, customers: renderCustomers, projects: renderProjects,
-    cad2d: renderCad2D, sketchup: renderSketchup, surveys: renderSurveys, materials: renderMaterials,
+    cad2d: renderCad2D, sketchup: renderSketchup, manufacturing: renderManufacturing, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
   routes[page]();
@@ -477,6 +479,13 @@ async function renderReports() {
 function renderCad2D() {
   setContent('الرسم الهندسي 2D', '<div id="cad2dRoot"></div>');
   sceneCleanup = mountDrafting2D(document.querySelector('#cad2dRoot'));
+}
+
+async function renderManufacturing() {
+  setContent('كتالوج التصنيع', '<div id="manufacturingRoot"></div>');
+  const root = document.querySelector('#manufacturingRoot');
+  const cleanup = await mountManufacturingCatalog(root, { supabase, user: currentUser });
+  if (currentPage === 'manufacturing') sceneCleanup = cleanup;
 }
 
 async function renderSketchup() {
