@@ -425,45 +425,43 @@ export function mountCadKernelLab() {
   overlay.querySelector('#cadSofaBuild').addEventListener('click', () => { pendingSofaBuild = false; });
 
   const createPillowGeometry = (THREE, width, depth, thickness, thicknessAxis = 'z') => {
-    // Closed, softly crowned cushion mesh. Seat cushions bulge on Z; back cushions
-    // bulge toward the user on Y. Side walls close the mesh for reliable lighting.
+    // Soft, restrained upholstery volume. It is intentionally centered so the
+    // engineering part position from OCCT remains authoritative.
     const geometry = new THREE.BufferGeometry();
-    const uSteps = 40, vSteps = 28, positions = [], indices = [], uvs = [];
-    const surfaceStarts = [];
-    const pointAt = (u, v, sign) => {
-      const crown = Math.pow(Math.max(0, 1-u*u) * Math.max(0, 1-v*v), 0.38);
-      const bulge = sign * thickness * (0.13 + 0.37 * crown);
-      if (thicknessAxis === 'y') return [width * 0.5 * u, bulge, depth * 0.5 * v];
-      return [width * 0.5 * u, depth * 0.5 * v, bulge];
-    };
-    const boundary = [];
-    for (let i=0;i<=uSteps;i++) boundary.push(i);
-    for (let j=1;j<=vSteps;j++) boundary.push(j*(uSteps+1)+uSteps);
-    for (let i=uSteps-1;i>=0;i--) boundary.push(vSteps*(uSteps+1)+i);
-    for (let j=vSteps-1;j>0;j--) boundary.push(j*(uSteps+1));
-    for (const sign of [1,-1]) {
-      const start = positions.length / 3;
-      surfaceStarts.push(start);
-      for (let j=0;j<=vSteps;j++) {
+    const uSteps=36, vSteps=24, positions=[], indices=[], uvs=[];
+    const hw=width*0.5, hd=depth*0.5, ht=thickness*0.5;
+    const crown=Math.min(thickness*0.16,22);
+    const bulge=(u,v)=>crown*Math.pow(Math.max(0,1-u*u),0.65)*Math.pow(Math.max(0,1-v*v),0.65);
+    const addSurface=(sign)=>{
+      const base=positions.length/3;
+      for(let j=0;j<=vSteps;j++){
         const v=-1+2*j/vSteps;
-        for (let i=0;i<=uSteps;i++) {
+        for(let i=0;i<=uSteps;i++){
           const u=-1+2*i/uSteps;
-          positions.push(...pointAt(u,v,sign));
+          const b=bulge(u,v);
+          if(thicknessAxis==='y') positions.push(hw*u, sign*(ht+b), hd*v);
+          else positions.push(hw*u, hd*v, sign*(ht+b));
           uvs.push((u+1)/2,(v+1)/2);
         }
       }
-      for (let j=0;j<vSteps;j++) for (let i=0;i<uSteps;i++) {
-        const a=start+j*(uSteps+1)+i, b=a+1, c=a+uSteps+1, d=c+1;
-        if ((sign>0) === (thicknessAxis==='z')) indices.push(a,c,b,b,c,d);
-        else indices.push(a,b,c,b,d,c);
-      }
+      return base;
+    };
+    const top=addSurface(1), bottom=addSurface(-1);
+    for(let j=0;j<vSteps;j++) for(let i=0;i<uSteps;i++){
+      const a=top+j*(uSteps+1)+i,b=a+1,c=a+uSteps+1,d=c+1;
+      const e=bottom+j*(uSteps+1)+i,f=e+1,g=e+uSteps+1,h=g+1;
+      indices.push(a,c,b,b,c,d);
+      indices.push(e,f,g,f,h,g);
     }
-    const topStart=surfaceStarts[0], bottomStart=surfaceStarts[1];
-    for (let k=0;k<boundary.length;k++) {
-      const next=(k+1)%boundary.length;
-      const a=topStart+boundary[k], b=topStart+boundary[next];
-      const c=bottomStart+boundary[k], d=bottomStart+boundary[next];
-      indices.push(a,b,c,b,d,c);
+    const boundary=[];
+    for(let i=0;i<=uSteps;i++) boundary.push(i);
+    for(let j=1;j<=vSteps;j++) boundary.push(j*(uSteps+1)+uSteps);
+    for(let i=uSteps-1;i>=0;i--) boundary.push(vSteps*(uSteps+1)+i);
+    for(let j=vSteps-1;j>0;j--) boundary.push(j*(uSteps+1));
+    for(let k=0;k<boundary.length;k++){
+      const n=(k+1)%boundary.length;
+      indices.push(top+boundary[k],top+boundary[n],bottom+boundary[k],
+                   top+boundary[n],bottom+boundary[n],bottom+boundary[k]);
     }
     geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
     geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));
