@@ -96,10 +96,10 @@ export async function createSofaAssemblyPreview({ width = 2200, depth = 900, hei
   // Structural timber frame: four perimeter rails and a central support rail.
   add('frame-front','عارضة الهيكل الأمامية','wood','خشب',arm,leg,leg,p.width-arm*2,45,railHeight);
   add('frame-back','عارضة الهيكل الخلفية','wood','خشب',arm,p.depth-90,leg,p.width-arm*2,45,railHeight);
-  add('frame-left','عارضة الهيكل الجانبية اليسرى','wood','خشب',arm,leg+45,leg,45,p.depth-135,railHeight);
-  add('frame-right','عارضة الهيكل الجانبية اليمنى','wood','خشب',p.width-arm-45,leg+45,leg,45,p.depth-135,railHeight);
+  add('frame-left','عارضة الهيكل الجانبية اليسرى','wood','خشب',arm,leg+45,leg,45,p.depth-235,railHeight);
+  add('frame-right','عارضة الهيكل الجانبية اليمنى','wood','خشب',p.width-arm-45,leg+45,leg,45,p.depth-235,railHeight);
   add('frame-center','دعامة وسطية للهيكل','wood','خشب',p.width/2-22.5,leg+45,leg,45,p.depth-135,railHeight);
-  add('seat-deck','قاعدة حمل الإسفنج','wood','كونتر',arm+45,leg+45,leg+railHeight,p.width-arm*2-90,p.depth-135,24);
+  add('seat-deck','قاعدة حمل الإسفنج','wood','كونتر',arm+45,leg+45,leg+railHeight,p.width-arm*2-90,p.depth-280,24);
 
   // Four feet, represented as individual solid components.
   [[55,55],[p.width-125,55],[55,p.depth-125],[p.width-125,p.depth-125]].forEach((v,i) =>
