@@ -114,7 +114,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
   }
   function assemblyPreview() {
     const parts = catalog.parts.filter(p => number(p.width) > 0 && number(p.height) > 0 && number(p.qty) > 0);
-    const missing = parts.filter(p => !p.position || !['x','y','z'].every(k => Number.isFinite(Number(p.position[k]))));
+    const missing = parts.filter(p => !p.position || !['x','y','z'].every(k => p.position[k] !== null && p.position[k] !== '' && Number.isFinite(Number(p.position[k]))));
     const repeated = parts.filter(p => Math.floor(number(p.qty)) !== 1);
     return { parts, missing, repeated, complete: parts.length > 0 && missing.length === 0 && repeated.length === 0 };
   }
@@ -309,7 +309,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
       part.position ||= { x: null, y: null, z: null };
       const raw = el.value.trim();
       part.position[el.dataset.position] = raw === '' ? null : toMm(raw);
-      if (['x','y','z'].some(k => part.position[k] === null || !Number.isFinite(Number(part.position[k])))) part.position = null;
+      if (['x','y','z'].every(k => part.position[k] === null)) part.position = null;
       markDirty(); render();
     }));
     root.querySelectorAll('[data-rotation]').forEach(el => el.addEventListener('change', () => {
