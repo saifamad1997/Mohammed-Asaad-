@@ -77,12 +77,28 @@ export function renderCadWorkspace() {
     renderParts();
     byId('cadStatus').textContent='تم تحديث المساقط · '+state.parts.length+' مكوّن · '+fmt(W)+' × '+fmt(H)+' × '+fmt(D)+' mm';
   }
+  function validateParts(){
+    const issues=[];
+    for(const p of state.parts){
+      if(p.x<0||p.y<0||p.z<0||p.x+p.w>state.width||p.y+p.d>state.depth||p.z+p.h>state.height)
+        issues.push('المكوّن «'+p.name+'» يتجاوز حدود الوحدة أو يبدأ بإحداثي سالب.');
+      if(!p.w||!p.h||!p.d) issues.push('المكوّن «'+p.name+'» لديه بُعد صفري أو غير صالح.');
+    }
+    for(let i=0;i<state.parts.length;i++) for(let j=i+1;j<state.parts.length;j++){
+      const a=state.parts[i],b=state.parts[j];
+      const overlap=a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.d&&a.y+a.d>b.y&&a.z<b.z+b.h&&a.z+a.h>b.z;
+      if(overlap) issues.push('تداخل حجمي محتمل بين «'+a.name+'» و«'+b.name+'».');
+    }
+    return issues;
+  }
   function renderParts(){
     byId('cadParts').innerHTML=state.parts.map(p=>`<div class="cad-part-row"><button class="cad-part-select" data-edit-part="${p.id}"><b>${esc(p.name)}</b><small>${p.w}×${p.h}×${p.d} مم · X ${p.x}, Y ${p.y}, Z ${p.z}</small></button><button data-del-part="${p.id}" aria-label="حذف المكوّن">×</button></div>`).join('')||'<small class="muted">لا توجد مكوّنات مضافة بعد.</small>';
     byId('cadParts').querySelectorAll('[data-edit-part]').forEach(b=>b.onclick=()=>{const p=state.parts.find(x=>x.id===b.dataset.editPart);if(!p)return;editingPartId=p.id;byId('cadPartName').value=p.name;byId('cadPX').value=p.x;byId('cadPY').value=p.y;byId('cadPZ').value=p.z;byId('cadPW').value=p.w;byId('cadPH').value=p.h;byId('cadPD').value=p.d;byId('cadSavePart').disabled=false;byId('cadAddPart').disabled=true;});
     byId('cadParts').querySelectorAll('[data-del-part]').forEach(b=>b.onclick=()=>{state.parts=state.parts.filter(p=>p.id!==b.dataset.delPart);render();});
     const total=state.parts.reduce((a,p)=>a+p.w*p.h*p.d,0);
-    byId('cadCutlist').innerHTML=state.parts.length?'<table class="cad-table"><thead><tr><th>القطعة</th><th>عدد</th><th>W</th><th>H</th><th>D</th></tr></thead><tbody>'+state.parts.map(p=>'<tr><td>'+esc(p.name)+'</td><td>1</td><td>'+p.w+'</td><td>'+p.h+'</td><td>'+p.d+'</td></tr>').join('')+'</tbody></table><small>الحجم الإجمالي التقريبي: '+fmt(total/1000000)+' لتر</small>':'<small>أضف مكونات لعرض جدول القص.</small>';
+    const issues=validateParts();
+    const validationBox='<div class="cad-validation '+(issues.length?'has-issues':'is-clear')+'"><b>'+(issues.length?'ملاحظات هندسية ('+issues.length+')':'فحص الحدود والتداخلات الأولي')+'</b>'+(issues.length?'<ul>'+issues.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':'<small>لم يُكتشف تجاوز للحدود أو تداخل حجمي بين المكوّنات الحالية.</small>')+'</div>';
+    byId('cadCutlist').innerHTML=validationBox+(state.parts.length?'<table class="cad-table"><thead><tr><th>القطعة</th><th>عدد</th><th>W</th><th>H</th><th>D</th></tr></thead><tbody>'+state.parts.map(p=>'<tr><td>'+esc(p.name)+'</td><td>1</td><td>'+p.w+'</td><td>'+p.h+'</td><td>'+p.d+'</td></tr>').join('')+'</tbody></table><small>الحجم الإجمالي التقريبي: '+fmt(total/1000000)+' لتر</small>':'<small>أضف مكونات لعرض جدول القص.</small>');
   }
   byId('cadApply').onclick=()=>{read();render();};
   byId('cadAddPart').onclick=()=>{read();const v=id=>mm(byId(id).value);state.parts.push({id:uid(),name:byId('cadPartName').value.trim()||'مكوّن',x:v('cadPX'),y:v('cadPY'),z:v('cadPZ'),w:v('cadPW'),h:v('cadPH'),d:v('cadPD')});render();};
