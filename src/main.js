@@ -1,8 +1,6 @@
 import { supabase, supabaseConfigured } from './lib/supabase.js';
 import { initAuthGate } from './lib/auth-gate.js';
 import './style.css';
-import { mountDrafting2D } from './cad/drafting-2d.js';
-import './cad/drafting-2d.css';
 import { renderDesignAssistant } from './cad/design-assistant.js';
 import './cad/design-assistant.css';
 import { mountManufacturingCatalog } from './cad/manufacturing-catalog.js';
@@ -12,8 +10,8 @@ window.__maSupabase = supabase;
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['designAssistant','مساعد التصميم الذكي','✧'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
-  ['cad2d','الرسم الهندسي 2D','⌗'],['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
-  ['manufacturing','كتالوج التصنيع','▧'],['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
+['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
+  ['manufacturing','التصميم الهندسي والتصنيع','▧'],['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥']
 ];
 let currentPage = 'dashboard';
@@ -152,7 +150,7 @@ function navigate(page) {
   }
   const routes = {
     dashboard: renderDashboard, designAssistant: renderDesignAssistant, customers: renderCustomers, projects: renderProjects,
-    cad2d: renderCad2D, sketchup: renderSketchup, manufacturing: renderManufacturing, surveys: renderSurveys, materials: renderMaterials,
+    sketchup: renderSketchup, manufacturing: renderManufacturing, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
   routes[page]();
@@ -474,11 +472,6 @@ async function renderReports() {
       await insertRow('project_finances',{project_id:data.project_id,type:data.type,amount:Number(data.amount),description:data.description||null,paid_at:data.paid_at?new Date(data.paid_at).toISOString():new Date().toISOString()});
     });
   } catch(error){showError(error);}
-}
-
-function renderCad2D() {
-  setContent('الرسم الهندسي 2D', '<div id="cad2dRoot"></div>');
-  sceneCleanup = mountDrafting2D(document.querySelector('#cad2dRoot'));
 }
 
 async function renderManufacturing() {
