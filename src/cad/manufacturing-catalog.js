@@ -22,7 +22,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
       title: '',
       itemType: 'خزانة',
       width: 0, height: 0, depth: 0,
-      board: { material: '', width: 0, height: 0, thickness: 0, kerf: 0, available: 0, grain: 'locked' },
+      board: { material: '', width: 0, height: 0, thickness: 0, kerf: 0, available: 0, unitCost: 0, grain: 'locked' },
       parts: [],
       notes: '',
       approved: false
@@ -52,6 +52,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const saved = project?.design_data?.manufacturing_catalog;
     catalog = saved && [1, 2].includes(saved.version) ? JSON.parse(JSON.stringify(saved)) : blankCatalog();
     catalog.version = 2;
+    catalog.board = { material: '', width: 0, height: 0, thickness: 0, kerf: 0, available: 0, unitCost: 0, grain: 'locked', ...(catalog.board || {}) };
     catalog.assembly ||= { coordinateSystem: 'origin-bottom-left-back', units: 'mm', placementMode: 'explicit' };
     catalog.assemblies = (Array.isArray(catalog.assemblies) ? catalog.assemblies : []).map(g => ({ id: g.id || uid('assembly'), name: g.name || 'مجموعة تجميع', type: g.type || 'custom', origin: g.origin || null, state: 'draft' }));
     catalog.parts = (catalog.parts || []).map(part => ({ ...part, position: part.position || null, rotation: part.rotation || { x: 0, y: 0, z: 0 }, orientation: part.orientation || { plane: 'xy' }, referenceFace: part.referenceFace || '', referenceEdge: part.referenceEdge || '', referenceNote: part.referenceNote || '', joinery: Array.isArray(part.joinery) ? part.joinery : [], hardware: Array.isArray(part.hardware) ? part.hardware : [] }));
@@ -59,6 +60,64 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     catalog.itemType ||= project?.furniture_type || 'قطعة أثاث';
     dirty = false;
   }
+  function importLatestAssistantDraft() {
+    let chats;
+    try { chats = JSON.parse(localStorage.getItem('ma-design-assistant-conversations-v2') || '[]'); }
+    catch { throw new Error('تعذرت قراءة مسودات مساعد التصميم من هذا الجهاز.'); }
+    const candidates = (Array.isArray(chats) ? chats : []).flatMap(chat =>
+      (Array.isArray(chat.messages) ? chat.messages : []).filter(message =>
+        message?.designDraft?.protocol === 'mo-asaad.cad-bridge' && message.designDraft.version === 1
+      ).map(message => message.designDraft)
+    ).sort((a,b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const draft = candidates[0];
+    if (!draft) throw new Error('لا توجد مسودة هندسية محفوظة. افتح مساعد التصميم، ارفع الصورة، ثم اطلب تحليلها أولاً.');
+    const dims = draft.design?.dimensions || {};
+    if (![dims.width,dims.depth,dims.height].every(value => Number.isFinite(Number(value)) && Number(value) > 0)) {
+      throw new Error('المسودة لا تحتوي الأبعاد الثلاثة بعد. أكمل اقتراح الأبعاد في مساعد التصميم ثم أعد الاستيراد.');
+    }
+    catalog.title = draft.design?.name || catalog.title || 'تصميم مستورد من مساعد التصميم';
+    catalog.itemType = draft.design?.kind || catalog.itemType || 'قطعة أثاث';
+    catalog.width = Number(dims.width);
+    catalog.depth = Number(dims.depth);
+    catalog.height = Number(dims.height);
+    const sourceLabel = draft.design?.dimensionSource === 'proposal' ? 'مقاسات مقترحة تقديرياً من تحليل الصورة — تحتاج مراجعة واعتماد المستخدم' : draft.design?.dimensionSource === 'user' ? 'مقاسات أدخلها المستخدم' : 'مصدر المقاسات غير محدد';
+    catalog.notes = [catalog.notes, 'استيراد من مساعد التصميم: ' + sourceLabel, draft.design?.description || ''].filter(Boolean).join('\n\n');
+    markDirty();
+    render();
+  }
+
+  function generateTemplateParts() {
+    const width = number(catalog.width), height = number(catalog.height), depth = number(catalog.depth);
+    const thickness = number(catalog.board.thickness);
+    const kind = root.querySelector('[data-template-kind]')?.value || 'desk';
+    const shelfCount = Math.max(0, Math.min(20, Math.floor(number(root.querySelector('[data-template-shelves]')?.value || 2))));
+    if (!(width > 0 && height > 0 && depth > 0)) { alert('استورد الأبعاد من مساعد التصميم أو أدخل العرض والارتفاع والعمق أولاً.'); return; }
+    if (!(thickness > 0)) { alert('أدخل سماكة اللوح الفعلية قبل توليد قائمة القطع.'); return; }
+    const innerWidth = width - 2 * thickness;
+    if (innerWidth <= 0) { alert('العرض أصغر من سماكتي الجانبين. راجع الأبعاد والسماكة.'); return; }
+    const part = (name, role, w, h, qty) => ({ id: uid('part'), assemblyId: '', name, role, width: w, height: h, qty, grain: true, position: null, orientation: { plane: 'xy' }, referenceFace: '', referenceEdge: '', referenceNote: '', rotation: { x: 0, y: 0, z: 0 }, joinery: [], hardware: [] });
+    if (kind === 'desk') {
+      if (height <= thickness) { alert('ارتفاع المكتب غير صالح مقارنة بسماكة اللوح.'); return; }
+      catalog.parts = [
+        part('سطح المكتب', 'top', width, depth, 1),
+        part('جانب حامل أيمن', 'side', depth, height - thickness, 1),
+        part('جانب حامل أيسر', 'side', depth, height - thickness, 1)
+      ];
+      catalog.notes = [catalog.notes, 'قالب أولي لمكتب بسطح وجانبين حاملين. لا يشمل الأدراج أو الحواجز أو الظهر أو الإكسسوارات؛ أضفها حسب التصميم الفعلي.'].filter(Boolean).join('\n\n');
+    } else {
+      catalog.parts = [
+        part('جانب الخزانة الأيمن', 'side', depth, height, 1),
+        part('جانب الخزانة الأيسر', 'side', depth, height, 1),
+        part('سقف الخزانة', 'top', innerWidth, depth, 1),
+        part('قاعدة الخزانة', 'bottom', innerWidth, depth, 1),
+        ...(shelfCount ? [part('رف داخلي', 'shelf', innerWidth, depth, shelfCount)] : [])
+      ];
+      catalog.notes = [catalog.notes, 'قالب أولي لصندوق خزانة مفتوح. لا يشمل الظهر أو الأبواب أو الأدراج أو الفواصل أو الإكسسوارات؛ أضفها بعد تحديد طريقة التصنيع.'].filter(Boolean).join('\n\n');
+    }
+    markDirty();
+    render();
+  }
+
   function computeLayout() {
     const board = catalog.board;
     const bw = number(board.width), bh = number(board.height), kerf = Math.max(0, number(board.kerf));
@@ -272,6 +331,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
           <label>الارتفاع (${unitLabel()})<input type="number" min="0.1" step="${displayUnit === 'cm' ? '0.1' : '1'}" data-field="height" value="${fromMm(catalog.height)}"></label>
           <label>العمق (${unitLabel()})<input type="number" min="0.1" step="${displayUnit === 'cm' ? '0.1' : '1'}" data-field="depth" value="${fromMm(catalog.depth)}"></label>
         </div>
+        <div class="mfg-import-row"><button type="button" class="btn" data-import-assistant-draft>استيراد أبعاد آخر تحليل من مساعد التصميم</button><small>الأبعاد المقترحة من الصورة تقديرية وتظهر للمراجعة قبل التصنيع.</small></div>
       </section>
       <section class="section-card mfg-section"><div class="section-heading"><div><h2>2. مواصفات اللوح المتوفر</h2><p>أدخل المقاس والسماكة والهدر المتاح من واقع المستودع؛ لا يتم خصم أي مخزون تلقائياً.</p></div></div>
         <div class="mfg-fields">
@@ -281,16 +341,17 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
           <label>السماكة (${unitLabel()})<input type="number" min="0.1" step="${displayUnit === 'cm' ? '0.1' : '1'}" data-board="thickness" value="${fromMm(board.thickness)}"></label>
           <label>عرض شفرة المنشار (${unitLabel()})<input type="number" min="0" step="${displayUnit === 'cm' ? '0.1' : '1'}" data-board="kerf" value="${fromMm(board.kerf)}"></label>
           <label>ألواح متوفرة حالياً<input type="number" min="0" step="1" data-board="available" value="${available}"></label>
+          <label>سعر اللوح الواحد (د.أ)<input type="number" min="0" step="0.01" data-board="unitCost" value="${number(board.unitCost)}"></label>
           <label>اتجاه العروق<select data-board="grain"><option value="locked" ${board.grain !== 'free' ? 'selected' : ''}>ثابت — يمنع تدوير القطع</option><option value="free" ${board.grain === 'free' ? 'selected' : ''}>غير مقيّد — يسمح بالتدوير</option></select></label>
         </div>
       </section>
-      <section class="section-card mfg-section"><div class="section-heading"><div><h2>3. قائمة القطع</h2><p>أدخل كل قطعة كما يجب أن تُقص، مع العدد والمقاسات الصافية.</p></div><button class="btn btn-primary" data-add-part>＋ إضافة قطعة</button></div>
+      <section class="section-card mfg-section"><div class="section-heading"><div><h2>3. قائمة القطع</h2><p>أدخل كل قطعة كما يجب أن تُقص، مع العدد والمقاسات الصافية.</p></div><button class="btn btn-primary" data-add-part>＋ إضافة قطعة</button></div><div class="mfg-template-row"><label>قالب توليد أولي<select data-template-kind><option value="desk">مكتب بسطح وجانبين حاملين</option><option value="cabinet">صندوق خزانة مفتوح</option></select></label><label>عدد الرفوف الداخلية<input type="number" min="0" max="20" step="1" value="2" data-template-shelves></label><button type="button" class="btn" data-generate-template>توليد قائمة القطع من الأبعاد</button><small>قالب مبدئي قابل للتعديل؛ لا يشمل تفاصيل غير محددة مثل الأبواب والأدراج والظهر والوصلات.</small></div>
         <div class="table-wrap"><table class="mfg-parts"><thead><tr><th>اسم القطعة</th><th>مجموعة التجميع</th><th>الدور</th><th>الوجه المرجعي</th><th>الحافة المرجعية</th><th>مستوى اللوح</th><th>العرض (${unitLabel()})</th><th>الطول (${unitLabel()})</th><th>العدد</th><th>اتجاه العروق</th><th>موضع X / Y / Z (${unitLabel()})</th><th>دوران Z (°)</th><th></th></tr></thead><tbody>
           ${catalog.parts.map(p => `<tr data-part="${esc(p.id)}"><td><input data-part-field="name" value="${esc(p.name)}"></td><td><select data-part-field="assemblyId"><option value="">بدون مجموعة</option>${catalog.assemblies.map(g=>`<option value="${esc(g.id)}" ${p.assemblyId===g.id?'selected':''}>${esc(g.name)}</option>`).join('')}</select></td><td><select data-part-field="role"><option value="custom" ${(p.role||'custom')==='custom'?'selected':''}>مخصص</option><option value="side" ${p.role==='side'?'selected':''}>جانب</option><option value="top" ${p.role==='top'?'selected':''}>سقف</option><option value="bottom" ${p.role==='bottom'?'selected':''}>قاعدة</option><option value="shelf" ${p.role==='shelf'?'selected':''}>رف</option><option value="back" ${p.role==='back'?'selected':''}>ظهر</option><option value="door" ${p.role==='door'?'selected':''}>باب</option><option value="drawer" ${p.role==='drawer'?'selected':''}>درج</option><option value="front" ${p.role==='front'?'selected':''}>واجهة</option></select></td><td><select data-part-field="referenceFace"><option value="">غير محدد</option><option value="front" ${p.referenceFace==='front'?'selected':''}>أمامي</option><option value="back" ${p.referenceFace==='back'?'selected':''}>خلفي</option><option value="left" ${p.referenceFace==='left'?'selected':''}>يسار</option><option value="right" ${p.referenceFace==='right'?'selected':''}>يمين</option><option value="top" ${p.referenceFace==='top'?'selected':''}>علوي</option><option value="bottom" ${p.referenceFace==='bottom'?'selected':''}>سفلي</option><option value="custom" ${p.referenceFace==='custom'?'selected':''}>مخصص</option></select></td><td><select data-part-field="referenceEdge"><option value="">غير محددة</option><option value="edge-1" ${p.referenceEdge==='edge-1'?'selected':''}>حافة 1</option><option value="edge-2" ${p.referenceEdge==='edge-2'?'selected':''}>حافة 2</option><option value="edge-3" ${p.referenceEdge==='edge-3'?'selected':''}>حافة 3</option><option value="edge-4" ${p.referenceEdge==='edge-4'?'selected':''}>حافة 4</option><option value="custom" ${p.referenceEdge==='custom'?'selected':''}>مخصصة</option></select></td><td><select data-part-field="plane"><option value="xy" ${(p.orientation?.plane||'xy')==='xy'?'selected':''}>XY — أمامي</option><option value="xz" ${p.orientation?.plane==='xz'?'selected':''}>XZ — أفقي</option><option value="yz" ${p.orientation?.plane==='yz'?'selected':''}>YZ — جانبي</option></select></td><td><input type="number" min="1" data-part-field="width" value="${fromMm(p.width)}" step="${displayUnit === 'cm' ? '0.1' : '1'}"></td><td><input type="number" min="1" data-part-field="height" value="${fromMm(p.height)}" step="${displayUnit === 'cm' ? '0.1' : '1'}"></td><td><input type="number" min="1" step="1" data-part-field="qty" value="${number(p.qty)}"></td><td><select data-part-field="grain"><option value="true" ${p.grain !== false ? 'selected' : ''}>ثابت</option><option value="false" ${p.grain === false ? 'selected' : ''}>مسموح تدويرها</option></select></td><td><div class="mfg-position-fields"><input type="number" step="${displayUnit === 'cm' ? '0.1' : '1'}" placeholder="X" aria-label="موضع X" data-position="x" value="${p.position && p.position.x != null ? fromMm(p.position.x) : ''}"><input type="number" step="${displayUnit === 'cm' ? '0.1' : '1'}" placeholder="Y" aria-label="موضع Y" data-position="y" value="${p.position && p.position.y != null ? fromMm(p.position.y) : ''}"><input type="number" step="${displayUnit === 'cm' ? '0.1' : '1'}" placeholder="Z" aria-label="موضع Z" data-position="z" value="${p.position && p.position.z != null ? fromMm(p.position.z) : ''}"></div></td><td><input type="number" step="1" aria-label="دوران Z بالدرجات" data-rotation="z" value="${number(p.rotation?.z)}"></td><td><button class="btn btn-small" data-remove-part="${esc(p.id)}">حذف</button></td></tr>`).join('') || '<tr><td colspan="13" class="empty-cell">أضف القطع المطلوبة لبدء حساب الألواح.</td></tr>'}
         </tbody></table></div>
       </section>
       <section class="section-card mfg-section"><div class="section-heading"><div><h2>4. ملخص الألواح وخطة القص الأولية</h2><p>ترتيب مستطيلات أولي يراعي kerf واتجاه العروق المسجل؛ ليس تحسين قص احترافياً معتمداً.</p></div></div>
-        <div class="mfg-summary"><article><span>إجمالي القطع</span><strong>${totalParts}</strong></article><article><span>الألواح المحسوبة</span><strong>${sheetCount}</strong></article><article><span>المتوفر المدخل</span><strong>${available}</strong></article><article><span>العجز التقديري</span><strong>${Math.max(0, sheetCount - available)}</strong></article></div>
+        <div class="mfg-summary"><article><span>إجمالي القطع</span><strong>${totalParts}</strong></article><article><span>الألواح المحسوبة</span><strong>${sheetCount}</strong></article><article><span>المتوفر المدخل</span><strong>${available}</strong></article><article><span>العجز التقديري</span><strong>${Math.max(0, sheetCount - available)}</strong></article><article><span>تكلفة الألواح التقديرية</span><strong>${(sheetCount * number(board.unitCost)).toFixed(2)} د.أ</strong></article></div>
         ${layout.errors.length ? '<div class="notice-card"><strong>تنبيهات الخطة</strong><ul>' + layout.errors.map(e => '<li>' + esc(e) + '</li>').join('') + '</ul></div>' : ''}
         <div class="mfg-sheets">${layout.sheets.map((sheet, i) => `
           <article class="mfg-sheet"><h3>لوح رقم ${i + 1} · ${fromMm(board.width)} × ${fromMm(board.height)} ${unitLabel()}</h3>
@@ -315,9 +376,11 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
       </section>
     `;
     root.querySelector('[data-display-unit]').onchange = e => { displayUnit = e.target.value === 'mm' ? 'mm' : 'cm'; render(); };
+    root.querySelector('[data-import-assistant-draft]').onclick = () => { try { importLatestAssistantDraft(); } catch (error) { alert(error.message || 'تعذر استيراد المسودة.'); } };
+    root.querySelector('[data-generate-template]').onclick = generateTemplateParts;
     root.querySelector('[data-back]').onclick = () => { selected = null; render(); };
     root.querySelectorAll('[data-field]').forEach(el => el.addEventListener('change', () => { const key = el.dataset.field; catalog[key] = ['width','height','depth'].includes(key) ? toMm(el.value) : el.value; markDirty(); render(); }));
-    root.querySelectorAll('[data-board]').forEach(el => el.addEventListener('change', () => { const key = el.dataset.board; catalog.board[key] = ['width','height','thickness','kerf'].includes(key) ? toMm(el.value) : key === 'available' ? number(el.value) : el.value; markDirty(); render(); }));
+    root.querySelectorAll('[data-board]').forEach(el => el.addEventListener('change', () => { const key = el.dataset.board; catalog.board[key] = ['width','height','thickness','kerf'].includes(key) ? toMm(el.value) : ['available','unitCost'].includes(key) ? number(el.value) : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-part-field]').forEach(el => el.addEventListener('change', () => { const row = el.closest('[data-part]'); const part = catalog.parts.find(p => p.id === row.dataset.part); const key = el.dataset.partField; if (key === 'plane') { part.orientation ||= { plane: 'xy' }; part.orientation.plane = el.value; } else { part[key] = ['width','height'].includes(key) ? toMm(el.value) : key === 'qty' ? number(el.value) : key === 'grain' ? el.value === 'true' : el.value; } markDirty(); render(); }));
     root.querySelectorAll('[data-position]').forEach(el => el.addEventListener('change', () => {
       const row = el.closest('[data-part]');
