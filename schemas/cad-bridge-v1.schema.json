@@ -1,0 +1,241 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mohammad-asad-autocad.vercel.app/schemas/cad-bridge-v1.schema.json",
+  "title": "Mohammed Asaad CAD Bridge Draft v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "protocol",
+    "version",
+    "draftId",
+    "createdAt",
+    "status",
+    "source",
+    "units",
+    "design",
+    "targets",
+    "validation"
+  ],
+  "properties": {
+    "protocol": {
+      "const": "mo-asaad.cad-bridge"
+    },
+    "version": {
+      "const": 1
+    },
+    "draftId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "rejected"
+      ]
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "kind",
+        "projectId"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "ai-assistant",
+            "project",
+            "manual"
+          ]
+        },
+        "projectId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "units": {
+      "type": "object",
+      "required": [
+        "length",
+        "angle"
+      ],
+      "properties": {
+        "length": {
+          "const": "mm"
+        },
+        "angle": {
+          "const": "degree"
+        }
+      }
+    },
+    "design": {
+      "type": "object",
+      "required": [
+        "kind",
+        "name",
+        "description",
+        "dimensions",
+        "materials",
+        "components",
+        "openQuestions"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "dimensions": {
+          "$ref": "#/$defs/dimensions"
+        },
+        "materials": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "name",
+              "thicknessMm",
+              "source"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "thicknessMm": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "source": {
+                "enum": [
+                  "user",
+                  "measured-file",
+                  "proposal",
+                  "unknown"
+                ]
+              }
+            }
+          }
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "role",
+              "dimensions"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string"
+              },
+              "dimensions": {
+                "$ref": "#/$defs/dimensions"
+              },
+              "transform": {
+                "type": [
+                  "object",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "openQuestions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "targets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "autocad",
+          "sketchup"
+        ]
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": [
+        "readyForGeometry",
+        "readyForManufacturing",
+        "issues"
+      ],
+      "properties": {
+        "readyForGeometry": {
+          "type": "boolean"
+        },
+        "readyForManufacturing": {
+          "type": "boolean"
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "dimensions": {
+      "type": "object",
+      "required": [
+        "width",
+        "depth",
+        "height"
+      ],
+      "properties": {
+        "width": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "depth": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "height": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      }
+    }
+  }
+}
