@@ -134,7 +134,6 @@ export function renderDesignAssistant() {
             const angle=preview.querySelector('.ma-sofa-angle');
             rotate.addEventListener('input',()=>{model.style.setProperty('--sofa-rotation',rotate.value+'deg');angle.textContent=rotate.value+'°';});
             model.style.setProperty('--sofa-rotation','-22deg');
-          }
           } else {
             preview.textContent='المعاينة التصورية التلقائية لهذا النوع من القطع لم تُجهّز بعد. ملف المسودة المنظم متاح للتنزيل.';
           }
