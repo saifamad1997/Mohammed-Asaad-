@@ -74,42 +74,58 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
       for (let i = 0; i < qty; i++) parts.push({ name: part.name || 'قطعة', width: w, height: h, grain: part.grain !== false, sourceId: part.id, index: i + 1 });
     }
     if (!parts.length) errors.push('أضف قطعة واحدة على الأقل إلى قائمة القص.');
-    parts.sort((a, b) => b.width * b.height - a.width * a.height);
+    // Shelf-based 2D nesting: test every existing row and legal orientation,
+    // then choose the placement with the least local leftover. Kerf is kept
+    // between neighbouring cuts; board edges are not charged as kerf.
+    parts.sort((a, b) => Math.max(b.width,b.height)-Math.max(a.width,a.height) || b.width*b.height-a.width*a.height);
     const sheets = [];
+    const orientationsFor = part => (board.grain === 'free' || !part.grain)
+      ? [{w:part.width,h:part.height,rotated:false},{w:part.height,h:part.width,rotated:true}]
+      : [{w:part.width,h:part.height,rotated:false}];
     for (const part of parts) {
-      let placed = false;
-      const orientations = board.grain === 'free' || !part.grain
-        ? [{w: part.width, h: part.height, rotated: false}, {w: part.height, h: part.width, rotated: true}]
-        : [{w: part.width, h: part.height, rotated: false}];
-      for (let si = 0; si < sheets.length && !placed; si++) {
-        const sheet = sheets[si];
-        for (const o of orientations) {
-          if (o.w > bw || o.h > bh) continue;
-          let row = sheet.rows[sheet.rows.length - 1];
-          if (row && o.h <= row.height && row.x + o.w + (row.x ? kerf : 0) <= bw) {
-            const x = row.x + (row.x ? kerf : 0);
-            sheet.placements.push({ ...part, x, y: row.y, w: o.w, h: o.h, rotated: o.rotated });
-            row.x = x + o.w; placed = true; break;
-          }
-          const y = row ? row.y + row.height + kerf : 0;
-          if (y + o.h <= bh) {
-            sheet.rows.push({ y, height: o.h, x: o.w });
-            sheet.placements.push({ ...part, x: 0, y, w: o.w, h: o.h, rotated: o.rotated });
-            placed = true; break;
+      let best = null;
+      const orientations = orientationsFor(part).filter(o => o.w <= bw && o.h <= bh);
+      for (let si=0;si<sheets.length;si++) {
+        const sheet=sheets[si];
+        for (let ri=0;ri<sheet.rows.length;ri++) {
+          const row=sheet.rows[ri];
+          for (const o of orientations) {
+            const x=row.x + (row.x ? kerf : 0);
+            if (o.h <= row.height && x+o.w <= bw) {
+              const score=(row.height-o.h)*bw + (bw-(x+o.w));
+              if (!best || score<best.score) best={kind:'row',si,ri,x,y:row.y,o,score};
+            }
           }
         }
       }
-      if (!placed) {
-        const sheet = { rows: [], placements: [] };
+      if (best) {
+        const sheet=sheets[best.si],row=sheet.rows[best.ri];
+        sheet.placements.push({...part,x:best.x,y:best.y,w:best.o.w,h:best.o.h,rotated:best.o.rotated});
+        row.x=best.x+best.o.w;
+        continue;
+      }
+      // No existing shelf fits: find the lowest new shelf on any current sheet.
+      for (let si=0;si<sheets.length;si++) {
+        const sheet=sheets[si];
+        const y=sheet.rows.reduce((max,row)=>Math.max(max,row.y+row.height),0) + (sheet.rows.length?kerf:0);
         for (const o of orientations) {
-          if (o.w <= bw && o.h <= bh) {
-            sheet.rows.push({ y: 0, height: o.h, x: o.w });
-            sheet.placements.push({ ...part, x: 0, y: 0, w: o.w, h: o.h, rotated: o.rotated });
-            placed = true; break;
-          }
+          if (y+o.h>bh) continue;
+          const score=(bh-(y+o.h))*bw + (bw-o.w);
+          if (!best || score<best.score) best={kind:'new-row',si,y,o,score};
         }
-        if (placed) sheets.push(sheet);
-        else errors.push('القطعة «' + part.name + '» (' + part.width + '×' + part.height + ' مم) لا تدخل في اللوح المحدد.');
+      }
+      if (best) {
+        const sheet=sheets[best.si];
+        sheet.rows.push({y:best.y,height:best.o.h,x:best.o.w});
+        sheet.placements.push({...part,x:0,y:best.y,w:best.o.w,h:best.o.h,rotated:best.o.rotated});
+        continue;
+      }
+      const first=orientations[0];
+      if (first) {
+        const sheet={rows:[{y:0,height:first.h,x:first.w}],placements:[{...part,x:0,y:0,w:first.w,h:first.h,rotated:first.rotated}]};
+        sheets.push(sheet);
+      } else {
+        errors.push('القطعة «'+part.name+'» ('+part.width+'×'+part.height+' مم) لا تدخل في اللوح المحدد، حتى بعد التدوير المسموح.');
       }
     }
     return { sheets, errors };
