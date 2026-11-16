@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 # محمد أسعد للتنجيد والتصميم الهندسي — SketchUp Bridge
-# Imports a project handoff JSON and creates separately named panel components.
-# IMPORTANT: This creates a parts-layout model, NOT an assembled furniture model.
+# Imports project handoff JSON as individually named panel groups.
+# Explicit XYZ places panel origins; this does not create joinery or a verified assembly.
 require 'sketchup.rb'
 require 'json'
 
@@ -46,14 +46,16 @@ module MohammedAsaad
       root.set_attribute(DICT, 'source', 'MohammedAsaad project JSON')
       root.set_attribute(DICT, 'project_no', project['project_no'].to_s)
       root.set_attribute(DICT, 'catalog_version', catalog['version'].to_i)
+      root.set_attribute(DICT, 'placement_coordinate_system', 'global-origin-lower-left-panel-plane; X=panel-width, Y=panel-height, Z=board-thickness')
 
       placed_mode = parts.all? do |part|
         pos = part['position']
         qty = part['qty'].to_i
-        qty == 1 && pos.is_a?(Hash) && %w[x y z].all? { |axis| pos.key?(axis) && !pos[axis].nil? && pos[axis].to_s != '' }
+        part['width'].to_f.positive? && part['height'].to_f.positive? && qty == 1 &&
+          pos.is_a?(Hash) && %w[x y z].all? { |axis| pos.key?(axis) && !pos[axis].nil? && pos[axis].to_s != '' }
       end
       parts_group = root.entities.add_group
-      parts_group.name = placed_mode ? 'قطع بمواضع XYZ المدخلة — تجميع مبدئي' : 'قائمة القطع — عرض منفصل غير مركب'
+      parts_group.name = placed_mode ? 'ألواح بمواضع XYZ المدخلة — دون وصلات' : 'قائمة القطع — عرض منفصل غير مركب'
       spacing = 80.mm
       cursor_x = 0.mm
       cursor_y = 0.mm
@@ -118,7 +120,7 @@ module MohammedAsaad
       model.commit_operation
       operation_started = false
       model.active_view.zoom_extents
-      UI.messagebox(placed_mode ? "تم استيراد #{created} قطعة وفق مواضع XYZ والدوران Z المدخلة.\nهذا نموذج مواضع أولي فقط؛ لا يثبت صحة الوصلات أو الثقوب أو الإكسسوارات." : "تم استيراد #{created} مكوّناً في ترتيب منفصل حسب قائمة القص.\nلم تكتمل مواضع XYZ لكل القطع، لذلك لم يتم إنشاء تجميع.")
+      UI.messagebox(placed_mode ? "تم استيراد #{created} قطعة وفق مواضع XYZ والدوران Z المدخلة.\nهذا نموذج ألواح بمواضعها فقط؛ X عرض اللوح وY ارتفاعه وZ سماكته. لا توجد وصلات أو ثقوب أو إكسسوارات محسوبة." : "تم استيراد #{created} مكوّناً في ترتيب منفصل حسب قائمة القص.\nلم تكتمل مواضع XYZ لكل القطع، لذلك لم يتم إنشاء تجميع.")
     rescue StandardError => e
       model.abort_operation if model && operation_started
       UI.messagebox("تعذر الاستيراد:\n#{e.message}")
