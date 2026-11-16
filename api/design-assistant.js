@@ -24,7 +24,7 @@ const SYSTEM_PROMPT = `أنت مهندس تصميم ومساعد تنفيذ لش
 
 قواعد الهندسة:
 - ميّز الطول والعرض والعمق والارتفاع والوحدات. لا تضع قيمة سالبة أو صفراً كبعد.
-- لا تستخرج أبعاداً دقيقة من صورة بلا مرجع قياس.
+- لا تستخرج أبعاداً دقيقة من صورة بلا مرجع قياس. إذا طلب المستخدم صراحةً أن تقترح له أبعاداً من الصورة ولا يملك أي قياس مرجعي، يمكنك اقتراح أبعاد معيارية تقريبية مناسبة لنوع الأثاث، لكن ضع dimensionSource="proposal" بوضوح، واشرح أنها تقديرات قابلة للتعديل وليست قياسات مستخرجة أو مضمونة. لا تجعلها اعتماد تصنيع. عند وجود صورة، ميّز ما تراه عن المقترح، ولا تملأ الأبعاد إلا عندما يكون اقتراحها مطلوباً أو مفوضاً.
 - لا تخترع تفاصيل وصلات أو سماكات أو إكسسوارات أو قصّات غير محسومة.
 - للكنب المنجّد: ميّز الأبعاد الخارجية عن أبعاد المقعد والظهر والذراعين. لا تعتبر صندوقاً خارجياً واحداً رسماً تصنيعياً كاملاً.
 - عند إنشاء components، اجعل كل عنصر مستقلاً باسم ودور وأبعاد عرض/عمق/ارتفاع؛ إن لم تعرف الأبعاد اتركها null ولا تخترعها.
@@ -77,12 +77,12 @@ export default async function handler(req, res) {
           type:"OBJECT",nullable:true,
           properties:{
             kind:{type:"STRING"},name:{type:"STRING"},description:{type:"STRING"},
-            dimensions:{type:"OBJECT",properties:{width:{type:"NUMBER",nullable:true},depth:{type:"NUMBER",nullable:true},height:{type:"NUMBER",nullable:true}},required:["width","depth","height"]},
+            dimensions:{type:"OBJECT",properties:{width:{type:"NUMBER",nullable:true},depth:{type:"NUMBER",nullable:true},height:{type:"NUMBER",nullable:true}},required:["width","depth","height"]},dimensionSource:{type:"STRING",enum:["user","proposal","unknown"]},
             materials:{type:"ARRAY",items:{type:"OBJECT",properties:{name:{type:"STRING"},thicknessMm:{type:"NUMBER",nullable:true},source:{type:"STRING"}},required:["name","thicknessMm","source"]}},
             components:{type:"ARRAY",items:{type:"OBJECT",properties:{id:{type:"STRING"},name:{type:"STRING"},role:{type:"STRING"},dimensions:{type:"OBJECT",properties:{width:{type:"NUMBER",nullable:true},depth:{type:"NUMBER",nullable:true},height:{type:"NUMBER",nullable:true}},required:["width","depth","height"]}},required:["id","name","role","dimensions"]}},
             openQuestions:{type:"ARRAY",items:{type:"STRING"}}
           },
-          required:["kind","name","description","dimensions","materials","components","openQuestions"]
+          required:["kind","name","description","dimensions","dimensionSource","materials","components","openQuestions"]
         }
       },
       required:["reply","designDraft"]
@@ -143,7 +143,7 @@ export default async function handler(req, res) {
         role:String(item?.role || "unspecified").slice(0,120),
         dimensions:dimensions(item?.dimensions)
       })) : [];
-      const topDimensions = dimensions(parsed.designDraft.dimensions);
+      const topDimensions = dimensions(parsed.designDraft.dimensions);\n      const dimensionSource = ["user","proposal","unknown"].includes(parsed.designDraft.dimensionSource) ? parsed.designDraft.dimensionSource : "unknown";
       const allGeometryDimensionsKnown = components.length > 0 && components.every(item => Object.values(item.dimensions).every(value => value !== null));
       const issues = [];
       if (!components.length) issues.push("لا توجد عناصر محددة بأبعاد هندسية.");
@@ -158,7 +158,7 @@ export default async function handler(req, res) {
           kind:String(parsed.designDraft.kind || "custom-furniture").slice(0,80),
           name:String(parsed.designDraft.name || "مسودة تصميم").slice(0,160),
           description:String(parsed.designDraft.description || "").slice(0,3000),
-          dimensions:topDimensions,materials,components,
+          dimensions:topDimensions,dimensionSource,materials,components,
           openQuestions:Array.isArray(parsed.designDraft.openQuestions) ? parsed.designDraft.openQuestions.slice(0,30).map(q=>String(q).slice(0,500)) : []
         },
         targets:["autocad","sketchup"],
