@@ -161,13 +161,26 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
           <form class="mfg-new-project" data-new-project>
             <label>اسم التصميم<input name="title" required maxlength="120" placeholder="مثال: خزانة غرفة النوم"></label>
             <label>نوع الأثاث<input name="furniture_type" required maxlength="80" placeholder="خزانة، مطبخ، مكتب، سرير…"></label>
-            <button class="btn btn-primary" type="submit">＋ بدء تصميم جديد</button>
-            <p class="muted" data-create-feedback>سيُنشأ ملف مشروع مستقل ويحفظ كتالوج التصنيع داخله.</p>
+            <label class="mfg-reference-upload">صورة مرجعية (اختياري)
+              <input name="reference_image" type="file" accept="image/png,image/jpeg,image/webp">
+              <span>＋ اختر صورة أو رسمة من جهازك</span>
+            </label>
+            <div class="mfg-reference-preview" data-image-preview hidden></div>
+            <button class="btn btn-primary" type="submit">＋ بدء التصميم وتحليل الصورة</button>
+            <p class="muted" data-create-feedback>إذا أرفقت صورة، سيحللها مساعد التصميم ويضيف وصفها وملاحظاته الأولية إلى ملف المشروع. الصورة مرجع بصري وليست قياسات تنفيذية.</p>
           </form>
         </section>
         <section class="section-card"><div class="section-heading"><div><h2>فتح مشروع سابق</h2><p>كل مشروع يحتفظ بكتالوجه وبيانات التصنيع الخاصة به.</p></div></div>
           <div class="mfg-project-list">${projects.map(p => `<button class="mfg-project" data-project="${esc(p.id)}"><strong>${esc(projectLabel(p))}</strong><span>${esc(p.furniture_type || 'نوع الأثاث غير محدد')}</span><b>فتح الكتالوج ←</b></button>`).join('') || '<p class="muted">لا توجد مشاريع محفوظة بعد. ابدأ تصميمك الأول من النموذج أعلاه.</p>'}</div>
         </section>`;
+      const newForm = root.querySelector('[data-new-project]');
+      const imagePicker = newForm.querySelector('[name="reference_image"]');
+      const imagePreview = newForm.querySelector('[data-image-preview]');
+      imagePicker.addEventListener('change', () => {
+        const file = imagePicker.files?.[0];
+        imagePreview.hidden = !file;
+        imagePreview.textContent = file ? 'الصورة المختارة: ' + file.name + ' (' + (file.size / 1024 / 1024).toFixed(2) + ' MB)' : '';
+      });
       root.querySelectorAll('[data-project]').forEach(b => b.onclick = () => { selected = b.dataset.project; hydrate(selectedProject()); render(); });
       root.querySelector('[data-new-project]').addEventListener('submit', async event => {
         event.preventDefault();
@@ -175,27 +188,61 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
         const button = form.querySelector('button[type="submit"]');
         const feedback = form.querySelector('[data-create-feedback]');
         const values = Object.fromEntries(new FormData(form).entries());
+        const imageFile = form.elements.namedItem('reference_image')?.files?.[0] || null;
         button.disabled = true;
-        button.textContent = 'جارٍ إنشاء التصميم…';
-        feedback.textContent = 'يتم إنشاء ملف التصميم وحفظه…';
+        button.textContent = imageFile ? 'جارٍ تحليل الصورة…' : 'جارٍ إنشاء التصميم…';
+        feedback.textContent = imageFile ? 'مساعد التصميم يفحص الصورة؛ لا تعتمد أي قياس مستنتج منها.' : 'يتم إنشاء ملف التصميم…';
         try {
+          let imageAnalysis = '';
+          if (imageFile) {
+            if (!['image/png','image/jpeg','image/webp'].includes(imageFile.type)) throw new Error('صيغة الصورة غير مدعومة. استخدم PNG أو JPG أو WEBP.');
+            if (imageFile.size > 5 * 1024 * 1024) throw new Error('حجم الصورة أكبر من 5 ميغابايت.');
+            const imageData = await new Promise((resolve,reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(String(reader.result || ''));
+              reader.onerror = () => reject(new Error('تعذرت قراءة الصورة.'));
+              reader.readAsDataURL(imageFile);
+            });
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+            const token = sessionData?.session?.access_token;
+            if (!token) throw new Error('انتهت جلسة الدخول. سجّل الدخول من جديد.');
+            const response = await fetch('/api/design-assistant', {
+              method:'POST',
+              headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+              body:JSON.stringify({messages:[{role:'user',content:'حلل الصورة المرجعية لهذا التصميم: '+String(values.title||'').trim()+'، النوع: '+String(values.furniture_type||'').trim()+'. صف الشكل الظاهر والتقسيمات والخامات المحتملة، وافصل بوضوح بين ما تراه وما تستنتجه. لا تخترع أي قياسات. أعطني ملخصاً عملياً وأسئلة المقاسات الناقصة.'}],image:imageData})
+            });
+            const result = await response.json().catch(()=>({}));
+            if (!response.ok) throw new Error(result.error || 'تعذر تحليل الصورة حالياً.');
+            imageAnalysis = String(result.reply || '').trim();
+            if (!imageAnalysis) throw new Error('لم يصل تحليل واضح للصورة.');
+          }
+          const description = [
+            'تم إنشاء المشروع مباشرة من قسم التصميم الهندسي والتصنيع.',
+            imageFile ? 'اسم الصورة المرجعية: '+imageFile.name : '',
+            imageAnalysis ? 'تحليل الصورة المرجعية (وصف أولي غير معتمد هندسياً):\\n'+imageAnalysis : ''
+          ].filter(Boolean).join('\\n\\n');
           const { data, error } = await supabase.from('projects').insert({
             owner_id: user.id,
             title: String(values.title || '').trim(),
             furniture_type: String(values.furniture_type || '').trim(),
             status: 'design',
-            description: 'تم إنشاء المشروع مباشرة من قسم التصميم الهندسي والتصنيع.'
+            description
           }).select('id,project_no,title,furniture_type,status,design_data,created_at').single();
           if (error) throw error;
           if (!data?.id) throw new Error('لم يرجع النظام ملف المشروع بعد الإنشاء.');
           projects.unshift(data);
           selected = data.id;
           hydrate(data);
+          if (imageAnalysis) {
+            catalog.notes = 'تحليل الصورة المرجعية — وصف أولي غير معتمد هندسياً:\\n'+imageAnalysis;
+            dirty = true;
+          }
           render();
         } catch (error) {
-          feedback.textContent = 'تعذر إنشاء التصميم: ' + (error?.message || 'خطأ غير معروف');
+          feedback.textContent = 'تعذر بدء التصميم: ' + (error?.message || 'خطأ غير معروف');
           button.disabled = false;
-          button.textContent = '＋ بدء تصميم جديد';
+          button.textContent = '＋ بدء التصميم وتحليل الصورة';
         }
       });
       return;
