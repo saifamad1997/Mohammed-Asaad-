@@ -504,3 +504,8 @@ tbody tr:hover{background:#f7faff}
 .assistant-draft-card small{font-size:10px;color:#8a98a6;line-height:1.7}
 .assistant-draft-card .btn{justify-self:start}
 @media(max-width:560px){.assistant-draft-card{padding:11px}.assistant-draft-card .btn{width:100%}}
+
+.assistant-design-preview{margin-top:8px;padding:12px;border:1px solid #dce5ec;border-radius:14px;background:linear-gradient(160deg,#fbfdff,#edf2f6);overflow:hidden}
+.assistant-design-preview[hidden]{display:none}
+.assistant-design-preview svg{display:block;width:100%;height:auto;max-height:340px}
+.assistant-draft-card .btn-primary{justify-self:start}
