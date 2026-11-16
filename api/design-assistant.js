@@ -39,10 +39,10 @@ const SYSTEM_PROMPT = `أنت كبير مهندسي التصميم والتصن�
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({error:'الطريقة غير مدعومة.'});
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-  if (!apiKey) return res.status(503).json({error:'مساعد التصميم غير مفعّل. أضف GEMINI_API_KEY كمتغير سري في إعدادات Vercel.'});
+  if (!apiKey) return res.status(503).json({error:'مساعد Claude غير مفعّل بعد. أضف ANTHROPIC_API_KEY كمتغير سري في إعدادات Vercel.'});
   if (!supabaseUrl || !supabaseKey) return res.status(503).json({error:'إعدادات التحقق من حساب الشركة غير مكتملة.'});
   const auth = req.headers.authorization || '';
   const token = auth.startsWith('Bearer ') ? auth.slice(7) : '';
@@ -57,45 +57,42 @@ export default async function handler(req, res) {
       return m;
     });
     const contents = messages.map((m, index) => {
-      const parts = [{text:m.content}];
+      const content = [{type:'text',text:m.content}];
       if (index === messages.length - 1 && m.role === 'user' && typeof body.image === 'string') {
         const match = body.image.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/=]+)$/);
         if (!match || body.image.length > 7_000_000) throw new Error('الصورة غير مدعومة أو حجمها كبير.');
-        parts.push({inlineData:{mimeType:'image/'+match[1],data:match[2]}});
+        content.push({type:'image',source:{type:'base64',media_type:'image/'+match[1],data:match[2]}});
       }
-      return {role:m.role === 'assistant' ? 'model' : 'user',parts};
+      return {role:m.role,content};
     });
     if (messages[messages.length - 1].role !== 'user' || !messages[messages.length - 1].content.trim() && !body.image) {
       return res.status(400).json({error:'اكتب رسالتك أو أرفق صورة أولاً.'});
     }
     const requestBody = JSON.stringify({
-      systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
-      contents,
-      generationConfig:{maxOutputTokens:700,temperature:0.35}
+      model: process.env.CLAUDE_MODEL || 'claude-sonnet-5-5',
+      max_tokens: 900,
+      system: SYSTEM_PROMPT,
+      messages: contents
     });
-    const primaryModel = 'gemini-3.5-flash-lite';
-    const fallbackModel = 'gemini-3.8-flash';
-    async function callGemini(model) {
-      const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(apiKey);
-      const response = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:requestBody});
-      const data = await response.json().catch(()=>({}));
-      return {response,data,model};
-    }
-    let attempt = await callGemini(primaryModel);
-    if (!attempt.response.ok && attempt.response.status === 503 && fallbackModel && fallbackModel !== primaryModel) {
-      console.warn('Primary Gemini model unavailable; trying fallback model',primaryModel,fallbackModel);
-      attempt = await callGemini(fallbackModel);
-    }
-    const {response:ai,data:result,model:usedModel} = attempt;
+    const ai = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key':apiKey,
+        'anthropic-version':'2023-06-01'
+      },
+      body:requestBody
+    });
+    const result = await ai.json().catch(()=>({}));
     if (!ai.ok) {
       const detail = result?.error?.message || 'unknown';
-      console.error('Gemini API error',usedModel,ai.status,detail);
+      console.error('Anthropic API error',ai.status,detail);
       if (ai.status === 429) return res.status(429).json({error:'وصل المساعد إلى حد الطلبات المتاح حالياً. انتظر قليلاً ثم حاول مرة أخرى.'});
-      if (ai.status === 401 || ai.status === 403) return res.status(503).json({error:'مفتاح Gemini غير صالح أو لا يملك صلاحية استخدام النموذج. راجع إعداد GEMINI_API_KEY في Vercel.'});
-      if (ai.status === 503) return res.status(503).json({error:'خدمة Gemini مشغولة حالياً، وحتى النموذج الاحتياطي لم يتمكن من الرد. انتظر قليلاً ثم أعد المحاولة.'});
-      return res.status(502).json({error:'تعذر على Gemini إكمال الرد حالياً. حاول مرة أخرى بعد قليل.'});
+      if (ai.status === 401 || ai.status === 403) return res.status(503).json({error:'مفتاح Anthropic غير صالح أو لا يملك صلاحية استخدام Claude. راجع إعداد ANTHROPIC_API_KEY في Vercel.'});
+      if (ai.status === 529 || ai.status === 503) return res.status(503).json({error:'خدمة Claude مشغولة حالياً. انتظر قليلاً ثم أعد المحاولة.'});
+      return res.status(502).json({error:'تعذر على Claude إكمال الرد حالياً. حاول مرة أخرى بعد قليل.'});
     }
-    const reply = (result.candidates?.[0]?.content?.parts || []).map(part=>part.text || '').join('\\n').trim();
+    const reply = (result.content || []).filter(part=>part.type === 'text').map(part=>part.text || '').join('\\n').trim();
     if (!reply) return res.status(502).json({error:'وصل رد فارغ من Gemini. حاول صياغة الطلب بطريقة أخرى.'});
     return res.status(200).json({reply});
   } catch (error) {
