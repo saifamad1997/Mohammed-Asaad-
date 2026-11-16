@@ -4,6 +4,8 @@ import './style.css';
 import { renderDesignAssistant } from './cad/design-assistant.js';
 import './cad/design-assistant.css';
 import { mountManufacturingCatalog } from './cad/manufacturing-catalog.js';
+import { renderCadWorkspace } from './cad/cad-workspace.js';
+import './cad/cad-workspace.css';
 import './cad/manufacturing-catalog.css';
 
 window.__maSupabase = supabase;
@@ -11,7 +13,7 @@ const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['designAssistant','مساعد التصميم الذكي','✧'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
 ['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
-  ['manufacturing','التصميم الهندسي والتصنيع','▧'],['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
+  ['cad','CAD الهندسي','▱'],['manufacturing','التصميم الهندسي والتصنيع','▧'],['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥']
 ];
 let currentPage = 'dashboard';
@@ -149,7 +151,7 @@ function navigate(page) {
     return;
   }
   const routes = {
-    dashboard: renderDashboard, designAssistant: renderDesignAssistant, customers: renderCustomers, projects: renderProjects,
+    dashboard: renderDashboard, designAssistant: renderDesignAssistant, cad: renderCadWorkspace, customers: renderCustomers, projects: renderProjects,
     sketchup: renderSketchup, manufacturing: renderManufacturing, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
