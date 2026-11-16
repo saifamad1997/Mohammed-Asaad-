@@ -83,7 +83,7 @@ export function renderDesignAssistant() {
     if (!chat || processingQueue) return;
     activeChatId=id; history=chat.messages; paint(); renderChatChoices();
   }
-  function addMessage(role, content, imageUrl) {
+  function addMessage(role, content, imageUrl, designDraft) {
     const item = document.createElement('article');
     item.className = 'assistant-message ' + (role === 'user' ? 'assistant-user' : 'assistant-bot');
     const who = document.createElement('span');
@@ -93,6 +93,29 @@ export function renderDesignAssistant() {
     body.textContent = content;
     item.append(who, body);
     if (imageUrl) { const img=document.createElement('img'); img.src=imageUrl; img.alt='الصورة المرفقة'; img.className='assistant-message-image'; item.append(img); }
+    if (designDraft && designDraft.protocol === 'mo-asaad.cad-bridge' && designDraft.version === 1) {
+      const panel=document.createElement('section');
+      panel.className='assistant-draft-card';
+      const heading=document.createElement('strong');
+      heading.textContent='مسودة هندسية أولية · '+(designDraft.design?.name || 'تصميم جديد');
+      const summary=document.createElement('p');
+      const parts=designDraft.design?.components || [];
+      const missing=parts.filter(part=>Object.values(part.dimensions || {}).some(value=>value === null)).length;
+      summary.textContent='العناصر: '+parts.length+' · عناصر تنتظر قياسات: '+missing+' · '+(designDraft.validation?.readyForGeometry?'الأبعاد الأساسية مكتملة مبدئياً':'تحتاج استكمال أبعاد');
+      const exportButton=document.createElement('button');
+      exportButton.type='button'; exportButton.className='btn btn-quiet'; exportButton.textContent='تنزيل ملف المسودة JSON';
+      exportButton.addEventListener('click',()=>{
+        const blob=new Blob([JSON.stringify(designDraft,null,2)],{type:'application/json'});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement('a');
+        link.href=url; link.download='design-draft-'+designDraft.draftId+'.json';
+        document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
+      });
+      const note=document.createElement('small');
+      note.textContent='هذه مسودة للاستيراد والتطوير، وليست اعتماد تصنيع. التصنيع غير معتمد.';
+      panel.append(heading,summary,exportButton,note);
+      item.append(panel);
+    }
     messagesEl.append(item);
     messagesEl.scrollTop = messagesEl.scrollHeight;
   }
@@ -103,7 +126,7 @@ export function renderDesignAssistant() {
       welcome.className='assistant-welcome';
       welcome.innerHTML='<span>✧</span><h3>أهلاً! شو حاب نصمم اليوم؟</h3><p>احكيلي الفكرة والمقاسات، وأنا بسألك عن التفاصيل اللي ناقصة خطوة بخطوة.</p>';
       messagesEl.append(welcome);
-    } else history.forEach(m=>addMessage(m.role,m.content,m.preview));
+    } else history.forEach(m=>addMessage(m.role,m.content,m.preview,m.designDraft));
   }
   renderChatChoices();
   paint();
@@ -287,7 +310,7 @@ export function renderDesignAssistant() {
         const result=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(result.error||'تعذر الاتصال بمساعد التصميم.');
         const answer=String(result.reply||'لم يصل رد واضح. حاول مرة أخرى.');
-        history.push({role:'assistant',content:answer});saveHistory();waiting.remove();addMessage('assistant',answer);
+        history.push({role:'assistant',content:answer,designDraft:result.designDraft || null});saveHistory();waiting.remove();addMessage('assistant',answer,null,result.designDraft || null);
       } catch(error) {
         waiting.remove();
         addMessage('assistant','صار في مشكلة: '+(error?.message||'حدث خطأ غير متوقع.')+'\nلم يتم حذف رسالتك؛ أعد الإرسال بعد معالجة المشكلة.');
