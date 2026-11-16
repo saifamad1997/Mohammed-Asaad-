@@ -71,10 +71,10 @@ export default async function handler(req, res) {
     const requestBody = JSON.stringify({
       systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
       contents,
-      generationConfig:{maxOutputTokens:1100,temperature:0.45}
+      generationConfig:{maxOutputTokens:700,temperature:0.35}
     });
-    const primaryModel = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
-    const fallbackModel = process.env.GEMINI_FALLBACK_MODEL || 'gemini-3.5-flash-lite';
+    const primaryModel = 'gemini-3.5-flash-lite';
+    const fallbackModel = 'gemini-3.8-flash';
     async function callGemini(model) {
       const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent?key='+encodeURIComponent(apiKey);
       const response = await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:requestBody});
