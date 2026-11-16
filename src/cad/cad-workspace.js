@@ -7,7 +7,7 @@ const uid = () => 'p'+Math.random().toString(36).slice(2,9);
 export function renderCadWorkspace() {
   const root=document.querySelector('#pageContent');
   root.innerHTML=`
-  <section class="cad-head"><div><span class="eyebrow">CAD WORKSPACE · MILLIMETRES</span><h2>لوحة الرسم الهندسي CAD</h2><p>ارسم وعدّل وحدات الأثاث، راجع المساقط، ثم صدّر DXF وملف هندسي JSON.</p></div><div class="cad-actions"><button class="btn" id="cadReset">تصميم جديد</button><button class="btn" id="cadJson">تصدير JSON</button><button class="btn btn-primary" id="cadDxf">تصدير DXF</button></div></section>
+  <section class="cad-head"><div><span class="eyebrow">CAD WORKSPACE · MILLIMETRES</span><h2>لوحة الرسم الهندسي CAD</h2><p>ارسم وعدّل وحدات الأثاث، راجع المساقط، ثم صدّر DXF وملف هندسي JSON.</p></div><div class="cad-actions"><button class="btn" id="cadReset">تصميم جديد</button><button class="btn" id="cadCsv">قائمة القص CSV</button><button class="btn" id="cadJson">تصدير JSON</button><button class="btn btn-primary" id="cadDxf">تصدير DXF</button></div></section>
   <div class="cad-layout">
     <aside class="cad-tools">
       <h3>خصائص التصميم</h3>
@@ -27,7 +27,7 @@ export function renderCadWorkspace() {
         <label>ارتفاع<input id="cadPH" type="number" value="800"></label><label>عمق<input id="cadPD" type="number" value="450"></label>
       </div>
       <button class="btn cad-full" id="cadAddPart">＋ إضافة مكوّن</button>
-      <div id="cadParts" class="cad-parts"></div>
+      <div id="cadParts" class="cad-parts"></div><section class="cad-cutlist"><h3>قائمة القص المبدئية</h3><div id="cadCutlist"></div></section>
       <p class="cad-warning">المقاسات الافتراضية للبدء فقط. راجع كل مكوّن وسماكة الخامة والوصلات قبل اعتماد التصنيع.</p>
     </aside>
     <section class="cad-drawing">
@@ -41,7 +41,7 @@ export function renderCadWorkspace() {
       <div class="cad-status" id="cadStatus">جاهز للرسم · كل الأبعاد بالملليمتر</div>
     </section>
   </div>`;
-  const byId=id=>root.querySelector('#'+id);
+  const byId=id=>root.querySelector('#'+id);\n  let editingPartId=null;
   function read(){
     state.name=byId('cadName').value.trim()||'تصميم بدون اسم';
     state.width=mm(byId('cadW').value);state.height=mm(byId('cadH').value);state.depth=mm(byId('cadD').value);state.thickness=mm(byId('cadT').value);
@@ -69,12 +69,15 @@ export function renderCadWorkspace() {
   function renderParts(){
     byId('cadParts').innerHTML=state.parts.map(p=>`<div class="cad-part-row"><span><b>${esc(p.name)}</b><small>${p.w}×${p.h}×${p.d} مم · X ${p.x}, Y ${p.y}, Z ${p.z}</small></span><button data-del-part="${p.id}" aria-label="حذف المكوّن">×</button></div>`).join('')||'<small class="muted">لا توجد مكوّنات مضافة بعد.</small>';
     byId('cadParts').querySelectorAll('[data-del-part]').forEach(b=>b.onclick=()=>{state.parts=state.parts.filter(p=>p.id!==b.dataset.delPart);render();});
+    const total=state.parts.reduce((a,p)=>a+p.w*p.h*p.d,0);
+    byId('cadCutlist').innerHTML=state.parts.length?'<table class="cad-table"><thead><tr><th>القطعة</th><th>عدد</th><th>W</th><th>H</th><th>D</th></tr></thead><tbody>'+state.parts.map(p=>'<tr><td>'+esc(p.name)+'</td><td>1</td><td>'+p.w+'</td><td>'+p.h+'</td><td>'+p.d+'</td></tr>').join('')+'</tbody></table><small>الحجم الإجمالي التقريبي: '+fmt(total/1000000)+' لتر</small>':'<small>أضف مكونات لعرض جدول القص.</small>';
   }
   byId('cadApply').onclick=()=>{read();render();};
   byId('cadAddPart').onclick=()=>{read();const v=id=>mm(byId(id).value);state.parts.push({id:uid(),name:byId('cadPartName').value.trim()||'مكوّن',x:v('cadPX'),y:v('cadPY'),z:v('cadPZ'),w:v('cadPW'),h:v('cadPH'),d:v('cadPD')});render();};
   root.querySelectorAll('[data-cad-view]').forEach(b=>b.onclick=()=>{byId('cadViews').dataset.view=b.dataset.cadView;root.querySelectorAll('[data-cad-view]').forEach(x=>x.classList.toggle('active',x===b));});
   byId('cadReset').onclick=()=>{Object.assign(state,{name:'وحدة أثاث جديدة',width:1200,height:800,depth:450,thickness:18,parts:[]});byId('cadName').value=state.name;byId('cadW').value=1200;byId('cadH').value=800;byId('cadD').value=450;byId('cadT').value=18;render();};
   function download(filename,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);}
+  byId('cadCsv').onclick=()=>{read();const rows=[['Part','Qty','Width_mm','Height_mm','Depth_mm','X_mm','Y_mm','Z_mm'],...state.parts.map(p=>[p.name,1,p.w,p.h,p.d,p.x,p.y,p.z])];const csv='\\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\\r\\n');download('ma-cad-cut-list.csv',csv,'text/csv;charset=utf-8');};
   byId('cadJson').onclick=()=>{read();download('ma-cad-design.json',JSON.stringify({schema:'mo-asaad.cad-geometry',version:1,units:'mm',design:{name:state.name,dimensions:{width:state.width,height:state.height,depth:state.depth,thickness:state.thickness},components:state.parts}},null,2),'application/json');};
   byId('cadDxf').onclick=()=>{
     read();let dxf='0\nSECTION\n2\nENTITIES\n';
