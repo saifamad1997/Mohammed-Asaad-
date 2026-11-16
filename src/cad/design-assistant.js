@@ -271,6 +271,7 @@ export function renderDesignAssistant() {
     processingQueue = true;
     while (sendQueue.length) {
       const queued = sendQueue.shift();
+      history.push(queued.message);saveHistory();
       const waiting=document.createElement('article');
       waiting.className='assistant-message assistant-bot assistant-thinking';
       waiting.textContent='مساعد التصميم يراجع فكرتك…';
@@ -281,7 +282,7 @@ export function renderDesignAssistant() {
         if(error)throw error;
         const token=data?.session?.access_token;
         if(!token)throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
-        const snapshot=history.slice(0, history.findIndex((m,i)=>i===history.length-1 && m===queued.message)+1);
+        const snapshot=history.slice();
         const response=await fetch('/api/design-assistant',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({messages:snapshot.slice(-18).map(({role,content})=>({role,content})),image:queued.image})});
         const result=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(result.error||'تعذر الاتصال بمساعد التصميم.');
@@ -298,7 +299,7 @@ export function renderDesignAssistant() {
     event.preventDefault();
     const text=input.value.trim(); if(!text&&!pendingImage)return;
     const userMessage={role:'user',content:text || 'حلل الصورة المرفقة واقترح تصميمها.',preview:pendingImage?.dataUrl||null};
-    history.push(userMessage); addMessage('user',userMessage.content,userMessage.preview);saveHistory();
+    addMessage('user',userMessage.content,userMessage.preview);
     sendQueue.push({message:userMessage,image:pendingImage?.dataUrl||null});
     input.value='';pendingImage=null;imageInput.value='';attachment.hidden=true;
     processQueue();
