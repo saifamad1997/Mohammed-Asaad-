@@ -169,7 +169,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const sheetCount = layout.sheets.length;
     root.innerHTML = `
       <section class="mfg-hero"><div><span class="mfg-kicker">PROJECT #${esc(project.project_no)}</span><h2>${esc(project.title)}</h2><p>كتالوج تصنيع مستقل محفوظ داخل ملف المشروع. أدخل بيانات الألواح والقطع الفعلية قبل اعتماد خطة القص.</p></div><button class="btn" data-back>كل المشاريع</button></section>
-      <div class="mfg-toolbar"><span class="mfg-save-state">${dirty ? '● تغييرات غير محفوظة' : '✓ آخر نسخة محفوظة'}</span><div><button class="btn" data-save>حفظ الكتالوج</button><button class="btn btn-primary" data-print>طباعة ورقة النجار</button></div></div>
+      <div class="mfg-toolbar"><span class="mfg-save-state">${dirty ? '● تغييرات غير محفوظة' : '✓ آخر نسخة محفوظة'}</span><div><button class="btn" data-save>حفظ الكتالوج</button><button class="btn" data-export-cuts>تنزيل جدول القص CSV</button><button class="btn btn-primary" data-print>طباعة ورقة النجار</button></div></div>
       <section class="section-card mfg-section"><div class="section-heading"><div><h2>1. بيانات التصميم</h2><p>اختر وحدة العرض؛ تُحفظ المقاسات داخلياً بالملليمتر لضمان دقة الحسابات.</p></div><label class="mfg-unit-control">وحدة القياس<select data-display-unit><option value="cm" ${displayUnit === 'cm' ? 'selected' : ''}>سنتيمتر (سم)</option><option value="mm" ${displayUnit === 'mm' ? 'selected' : ''}>ملليمتر (مم)</option></select></label></div>
         <div class="mfg-fields">
           <label>اسم الكتالوج<input data-field="title" value="${esc(catalog.title)}"></label>
@@ -229,6 +229,15 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', role: 'custom', width: 0, height: 0, qty: 1, grain: true }); markDirty(); render(); };
     root.querySelector('[data-notes]').addEventListener('change', e => { catalog.notes = e.target.value; markDirty(); });
     root.querySelector('[data-save]').onclick = save;
+    root.querySelector('[data-export-cuts]').onclick = () => {
+      const rows = [['رقم اللوح','رقم القطعة','اسم القطعة','العرض ' + unitLabel(),'الطول ' + unitLabel(),'اتجاه العروق','تدوير']];
+      layout.sheets.forEach((sheet, si) => sheet.placements.forEach((p, pi) => rows.push([
+        si + 1, pi + 1, p.name, fromMm(p.w), fromMm(p.h),
+        p.grain ? 'ثابت' : 'غير مقيّد', p.rotated ? 'نعم' : 'لا'
+      ])));
+      const csv = '\uFEFF' + rows.map(row => row.map(value => '"' + String(value ?? '').replace(/"/g, '""') + '"').join(',')).join('\r\n');
+      saveBlob('cut-list-' + (catalog.title || 'project') + '.csv', csv, 'text/csv;charset=utf-8');
+    };
     root.querySelector('[data-print]').onclick = () => window.print();
     root.querySelector('[data-approve]').onclick = () => {
       const check = computeLayout();
