@@ -17,3 +17,25 @@
 
 .mfg-sheet-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}.mfg-sheet-meta span{padding:8px;border:1px solid #e5ece7;border-radius:9px;background:#fbfdfb;color:#718078;font-size:10px}.mfg-sheet-meta strong{display:block;color:#2e7464;font-size:13px;margin-top:2px}.mfg-exploded-summary{display:flex;gap:8px;flex-wrap:wrap;margin:-2px 0 10px}.mfg-exploded-summary span{padding:7px 9px;border:1px solid #e5ece7;border-radius:8px;background:#fbfdfb;color:#718078;font-size:10px}.mfg-exploded-summary strong{color:#2e7464}@media(max-width:700px){.mfg-sheet-meta{grid-template-columns:1fr}}
 .mfg-new-project{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:end}.mfg-new-project>label{display:grid;gap:7px;color:#52665a;font-size:12px;font-weight:700}.mfg-new-project input:not([type=file]){width:100%;padding:11px;border:1px solid #dce8e0;border-radius:9px;background:#fff;color:#263b32;font:inherit}.mfg-reference-upload{grid-column:1/-1;padding:14px;border:1px dashed #a9c5b7;border-radius:12px;background:#f8fbf9;cursor:pointer}.mfg-reference-upload input{max-width:100%;font:inherit}.mfg-reference-upload span{color:#347968}.mfg-reference-preview{grid-column:1/-1;padding:8px 0;color:#60766b;font-size:12px}.mfg-new-project button,.mfg-new-project [data-create-feedback]{grid-column:1/-1}.mfg-new-project [data-create-feedback]{margin:0}@media(max-width:650px){.mfg-new-project{grid-template-columns:1fr}}
+
+
+/* Carpenter print sheet refinement */
+@page{size:A4;margin:12mm}
+@media print{
+  html,body{background:#fff!important;color:#111!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body *{visibility:hidden!important}
+  .mfg-hero,.mfg-hero *,.mfg-section,.mfg-section *{visibility:visible!important}
+  .mfg-hero,.mfg-section{position:relative!important;width:100%!important;margin:0 0 8mm!important;padding:5mm!important;background:#fff!important;color:#111!important;box-shadow:none!important;border:1px solid #aaa!important;break-inside:auto!important}
+  .mfg-hero{break-after:avoid!important}
+  .mfg-toolbar,.mfg-approval,.mfg-section button,.mfg-section [data-add-part],.mfg-section [data-add-assembly],.mfg-section [data-remove-part],.mfg-section [data-remove-assembly]{display:none!important}
+  .mfg-section h2,.mfg-section h3{color:#111!important}
+  .mfg-section p,.mfg-section small,.mfg-section label{color:#222!important}
+  .mfg-section input,.mfg-section select,.mfg-section textarea{color:#111!important;background:#fff!important;border:0!important;box-shadow:none!important}
+  .mfg-parts{width:100%!important;border-collapse:collapse!important;font-size:8pt!important}
+  .mfg-parts th,.mfg-parts td{border:1px solid #777!important;padding:3px!important;color:#111!important}
+  .mfg-sheet,.mfg-assembly-card,.mfg-assembly-group,.mfg-exploded-row{break-inside:avoid!important;box-shadow:none!important}
+  .mfg-sheets{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:5mm!important}
+  .mfg-sheet svg,.mfg-assembly-card svg{max-height:125mm!important}
+  .mfg-notes textarea{min-height:18mm!important}
+  .mfg-section{font-size:9pt!important}
+}
