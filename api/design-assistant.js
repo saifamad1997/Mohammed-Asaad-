@@ -93,7 +93,7 @@ export default async function handler(req, res) {
       return res.status(502).json({error:'تعذر على Claude إكمال الرد حالياً. حاول مرة أخرى بعد قليل.'});
     }
     const reply = (result.content || []).filter(part=>part.type === 'text').map(part=>part.text || '').join('\\n').trim();
-    if (!reply) return res.status(502).json({error:'وصل رد فارغ من Gemini. حاول صياغة الطلب بطريقة أخرى.'});
+    if (!reply) return res.status(502).json({error:'وصل رد فارغ من Claude. حاول صياغة الطلب بطريقة أخرى.'});
     return res.status(200).json({reply});
   } catch (error) {
     console.error('Design assistant error',error);
