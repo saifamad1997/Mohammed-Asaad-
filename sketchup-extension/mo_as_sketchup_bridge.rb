@@ -50,8 +50,8 @@ module MohammedAsaad
 
       placed_mode = parts.all? do |part|
         pos = part['position']
-        qty = part['qty'].to_i
-        part['width'].to_f.positive? && part['height'].to_f.positive? && qty == 1 &&
+        qty_value = Float(part['qty']) rescue 0
+        part['width'].to_f.positive? && part['height'].to_f.positive? && qty_value == 1 &&
           pos.is_a?(Hash) && %w[x y z].all? { |axis| pos.key?(axis) && !pos[axis].nil? && pos[axis].to_s != '' }
       end
       parts_group = root.entities.add_group
@@ -66,8 +66,9 @@ module MohammedAsaad
       parts.each do |part|
         width = part['width'].to_f
         height = part['height'].to_f
-        qty = part['qty'].to_i
-        next unless width.positive? && height.positive? && qty.positive?
+        qty_value = Float(part['qty']) rescue 0
+        next unless width.positive? && height.positive? && qty_value.positive? && qty_value == qty_value.to_i
+        qty = qty_value.to_i
 
         qty.times do |index|
           w = mm(width)
