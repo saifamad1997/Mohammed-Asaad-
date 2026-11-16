@@ -64,3 +64,9 @@
   .mfg-report-sheets{grid-template-columns:1fr 1fr!important;gap:5mm!important}
   .mfg-report-sheet{break-inside:avoid!important}
 }
+
+
+@media print{
+  .mfg-hero,.mfg-hero *,.mfg-section,.mfg-section *{visibility:hidden!important}
+  #mfg-print-report,#mfg-print-report *{visibility:visible!important}
+}
