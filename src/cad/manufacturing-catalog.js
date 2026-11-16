@@ -139,7 +139,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const x = 45, y = 30;
     return `
       <div class="mfg-assembly-grid">
-        <article class="mfg-assembly-card"><h3>الشكل المركب</h3><svg viewBox="0 0 ${w + 140} ${h + 110}" role="img" aria-label="معاينة شكل الخزانة">
+        <article class="mfg-assembly-card"><h3>الشكل المركب — ${fromMm(a.W)} × ${fromMm(a.H)} × ${fromMm(a.D)} ${unitLabel()}</h3><svg viewBox="0 0 ${w + 140} ${h + 110}" role="img" aria-label="معاينة شكل الخزانة">
           <polygon points="${x},${y} ${x + w},${y} ${x + w + dx},${y - dy} ${x + dx},${y - dy}" fill="#eef4f0" stroke="#2f6f60" stroke-width="3"/>
           <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="#f8fbf9" stroke="#2f6f60" stroke-width="4"/>
           <polygon points="${x + w},${y} ${x + w + dx},${y - dy} ${x + w + dx},${y + h - dy} ${x + w},${y + h}" fill="#e1ebe5" stroke="#2f6f60" stroke-width="4"/>
@@ -148,7 +148,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
           <text x="${x + w / 2}" y="${y + h + 34}" text-anchor="middle" font-size="16" font-weight="700" fill="#234b41">${fromMm(a.W)} × ${fromMm(a.H)} ${unitLabel()}</text>
           <text x="${x + w + dx + 10}" y="${y + h / 2}" font-size="14" fill="#234b41" transform="rotate(90 ${x + w + dx + 10} ${y + h / 2})">عمق ${fromMm(a.D)} ${unitLabel()}</text>
         </svg></article>
-        <article class="mfg-assembly-card"><h3>التفكيك — القطع الفعلية</h3><div class="mfg-exploded-list">${a.parts.map(p => `<div class="mfg-exploded-row"><span>${p.index}. ${esc(p.name)}</span><strong>${fromMm(p.width)} × ${fromMm(p.height)} ${unitLabel()}</strong><small>العدد: ${p.qty}</small></div>`).join("") || '<p class="muted">أضف قطعاً إلى كتالوج القص لتظهر هنا.</p>'}</div></article>
+        <article class="mfg-assembly-card"><h3>التفكيك — القطع الفعلية</h3><div class="mfg-exploded-summary"><span>عدد القطع: <strong>${a.parts.length}</strong></span><span>سماكة اللوح: <strong>${fromMm(a.t)} ${unitLabel()}</strong></span></div><div class="mfg-exploded-list">${a.parts.map(p => `<div class="mfg-exploded-row"><span>${p.index}. ${esc(p.name)}</span><strong>${fromMm(p.width)} × ${fromMm(p.height)} ${unitLabel()}</strong><small>العدد: ${p.qty}</small></div>`).join("") || '<p class="muted">أضف قطعاً إلى كتالوج القص لتظهر هنا.</p>'}</div></article>
       </div>`;
   }
   function render() {
@@ -204,7 +204,12 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
               <rect x="0" y="0" width="${number(board.width)}" height="${number(board.height)}" fill="#f7faf8" stroke="#68877a" stroke-width="8"/>
               ${sheet.placements.map((p, pi) => { const fs = Math.max(18, Math.min(52, Math.min(p.w, p.h) / 6)); return `<rect x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}" fill="${pi % 2 ? '#dceee8' : '#e8f0e8'}" stroke="#367e70" stroke-width="5"/><text x="${p.x + p.w/2}" y="${p.y + p.h/2 - fs*0.35}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" font-weight="700" fill="#234b41">${esc(p.name)}</text><text x="${p.x + p.w/2}" y="${p.y + p.h/2 + fs*0.9}" text-anchor="middle" dominant-baseline="middle" font-size="${Math.max(14, fs*0.72)}" fill="#234b41">${fromMm(p.w)} × ${fromMm(p.h)} ${unitLabel()}</text>`; }).join('')}
             </svg>
-            <p>${sheet.placements.length} قطعة موضوعة · المساحات غير المرسومة متبقية / هدر قص محتمل</p>
+            <div class="mfg-sheet-meta">
+              <span>قطع: <strong>${sheet.placements.length}</strong></span>
+              <span>المساحة المستخدمة: <strong>${(sheet.placements.reduce((s,p)=>s+p.w*p.h,0)/Math.max(1,number(board.width)*number(board.height))*100).toFixed(1)}%</strong></span>
+              <span>المتبقي النظري: <strong>${fromMm(Math.max(0, number(board.width)*number(board.height)-sheet.placements.reduce((s,p)=>s+p.w*p.h,0)))} ${unitLabel()}²</strong></span>
+            </div>
+            <p>الحدود الخضراء هي القطع المقصوصة. المساحة خارجها هي المتبقي قبل احتساب مسار المنشار الفعلي، ويجب مراجعة اتجاه العروق والقص قبل التنفيذ.</p>
           </article>`).join('') || '<p class="muted">أدخل قطعاً صالحة لتظهر خريطة القص.</p>'}
       </section>
       <section class="section-card mfg-section mfg-assembly"><div class="section-heading"><div><h2>5. شكل الخزانة والتفكيك والتركيب</h2><p>المعاينة مبنية على أبعاد المشروع نفسها، وتعرض الشكل العام والقطع الموجودة في كتالوج القص. نقاط التثبيت والخلوصات والإكسسوارات لا تُعتبر نهائية قبل اعتمادها.</p></div></div>
