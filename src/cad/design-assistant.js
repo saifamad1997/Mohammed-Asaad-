@@ -111,9 +111,30 @@ export function renderDesignAssistant() {
         link.href=url; link.download='design-draft-'+designDraft.draftId+'.json';
         document.body.append(link); link.click(); link.remove(); URL.revokeObjectURL(url);
       });
+      const previewButton=document.createElement('button');
+      previewButton.type='button'; previewButton.className='btn btn-primary'; previewButton.textContent='إظهار الشكل المبدئي';
+      const preview=document.createElement('div');
+      preview.className='assistant-design-preview';
+      preview.hidden=true;
+      preview.setAttribute('aria-label','معاينة تصورية أولية للتصميم');
+      previewButton.addEventListener('click',()=>{
+        preview.hidden=!preview.hidden;
+        previewButton.textContent=preview.hidden?'إظهار الشكل المبدئي':'إخفاء المعاينة';
+        if (!preview.dataset.drawn) {
+          const kind=String(designDraft.design?.kind||'').toLowerCase();
+          const name=String(designDraft.design?.name||'');
+          const isSofa=/sofa|couch|كنب|كنبة|كنباي/.test(kind+' '+name+' '+String(designDraft.design?.description||''));
+          if (isSofa) {
+            preview.innerHTML='<svg viewBox="0 0 640 390" role="img" aria-label="رسم تصوري ثلاثي المنظور لكنبة مستقيمة بثلاثة مقاعد"><defs><linearGradient id="sofaBody" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#dce2e8"/><stop offset="1" stop-color="#aeb9c5"/></linearGradient><linearGradient id="sofaSeat" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f0f2f4"/><stop offset="1" stop-color="#c4cdd5"/></linearGradient></defs><ellipse cx="320" cy="326" rx="225" ry="28" fill="#172b3a" opacity=".12"/><path d="M125 155 Q125 125 160 125 H480 Q515 125 515 155 V268 L475 295 H165 L125 268Z" fill="url(#sofaBody)" stroke="#788998" stroke-width="3"/><path d="M155 150 Q155 137 174 137 H466 Q485 137 485 155 V220 H155Z" fill="#c2ccd5" stroke="#8796a3" stroke-width="2"/><path d="M155 210 L485 210 L525 255 Q530 276 506 285 H135 Q110 278 117 255Z" fill="url(#sofaSeat)" stroke="#8796a3" stroke-width="3"/><path d="M155 214 L260 214 L285 279 H145 Q125 276 129 255Z" fill="#e6eaee" stroke="#9aa7b2" stroke-width="2"/><path d="M265 214 L375 214 L390 279 H285Z" fill="#dce2e7" stroke="#9aa7b2" stroke-width="2"/><path d="M380 214 L485 214 L511 255 Q518 278 492 279 H390Z" fill="#e6eaee" stroke="#9aa7b2" stroke-width="2"/><path d="M125 155 Q92 155 90 188 V270 Q92 294 120 294 H157 V170 Q155 155 125 155Z" fill="#b5c0ca" stroke="#788998" stroke-width="3"/><path d="M515 155 Q548 155 550 188 V270 Q548 294 520 294 H483 V170 Q485 155 515 155Z" fill="#a6b3bf" stroke="#788998" stroke-width="3"/><path d="M145 292 H170 V314 H145Z M470 292 H495 V314 H470Z" fill="#596a78"/><text x="320" y="365" text-anchor="middle" fill="#506273" font-size="17">معاينة تصورية — كنبة مستقيمة ثلاثية المقاعد</text></svg>';
+          } else {
+            preview.textContent='المعاينة التصورية التلقائية لهذا النوع من القطع لم تُجهّز بعد. ملف المسودة المنظم متاح للتنزيل.';
+          }
+          preview.dataset.drawn='1';
+        }
+      });
       const note=document.createElement('small');
-      note.textContent='هذه مسودة للاستيراد والتطوير، وليست اعتماد تصنيع. التصنيع غير معتمد.';
-      panel.append(heading,summary,exportButton,note);
+      note.textContent='المعاينة تصورية وليست مجسماً CAD أو اعتماد تصنيع. التصنيع غير معتمد.';
+      panel.append(heading,summary,previewButton,preview,exportButton,note);
       item.append(panel);
     }
     messagesEl.append(item);
