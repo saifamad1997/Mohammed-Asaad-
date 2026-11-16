@@ -7,11 +7,11 @@ export function renderDesignAssistant() {
   root.innerHTML = `
     <section class="assistant-hero">
       <div class="assistant-orb">✧</div>
-      <div><span class="eyebrow">مساعد الشركة الذكي</span><h2>احكي فكرتك… ونصممها مع بعض</h2>
+      <div><span class="eyebrow">مساعد الشركة الذكي</span><h2>اكتب طلبك… ونبدأ المسودة فوراً</h2>
       <p>مساعد متخصص بالأثاث والنجارة والتنجيد والمعادن. اكتب باللهجة اللي تريحك، أو أرفق صورة أو رسمة.</p></div>
     </section>
     <section class="assistant-shell">
-      <div class="assistant-chat-head"><div><strong>مساعد التصميم الهندسي</strong><small><span class="assistant-live-dot"></span> جاهز لمناقشة فكرتك</small></div><select id="assistantChats" class="assistant-chat-select" aria-label="المحادثات السابقة"></select><button type="button" class="btn btn-primary" id="assistantClear">＋ محادثة جديدة</button></div>
+      <div class="assistant-chat-head"><div><strong>مساعد التصميم الهندسي</strong><small><span class="assistant-live-dot"></span> يبدأ مسودة ثم يستكمل التفاصيل</small></div><select id="assistantChats" class="assistant-chat-select" aria-label="المحادثات السابقة"></select><button type="button" class="btn btn-primary" id="assistantClear">＋ محادثة جديدة</button></div>
       <div class="assistant-messages" id="assistantMessages" aria-live="polite"></div>
       <div class="assistant-voice-status" id="assistantVoiceStatus" hidden aria-live="polite">المحادثة الصوتية متوقفة</div>\n      <div class="assistant-attachment" id="assistantAttachment" hidden></div>
       <form class="assistant-composer" id="assistantForm">
@@ -21,7 +21,7 @@ export function renderDesignAssistant() {
       </form>
       <div class="assistant-hints"><button type="button" data-prompt="صمم لي خزانة ملابس حسب المقاسات التي سأعطيك إياها">خزانة ملابس</button><button type="button" data-prompt="بدي أصمم مكتب قيمنق من الصفر">مكتب قيمنق</button><button type="button" data-prompt="حلل الصورة المرفقة واقترح طريقة تصنيعها">حلّل صورة</button><button type="button" data-prompt="ساعدني بتصميم كنب زاوية حسب مساحة الغرفة">كنب زاوية</button></div>
     </section>
-    <div class="notice-card assistant-notice"><strong>ملاحظة مهمة</strong><p>المساعد يناقشك ويجمع المواصفات ويقترح حلولاً. ربطه بأدوات إنشاء المجسمات والمخططات وقوائم القصّات يجري على مراحل؛ لن نعرض تصميماً على أنه جاهز للتصنيع قبل فحص أبعاده وتفاصيله.</p></div>
+    <div class="notice-card assistant-notice"><strong>طريقة العمل</strong><p>المهندس يبدأ بمسودة تصورية فور كتابة طلبك، ثم يسألك عن أهم معلومة ناقصة. الربط المباشر الحي مع AutoCAD وSketchUp يحتاج إضافة سطح مكتب محلية للبرنامجين؛ هذه المرحلة تجهّز المواصفات ولا تدّعي أنها رسمت داخل البرنامجين.</p></div>
   `;
 
   const messagesEl = root.querySelector('#assistantMessages');
