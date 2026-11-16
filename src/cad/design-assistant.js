@@ -19,7 +19,7 @@ export function renderDesignAssistant() {
         <textarea id="assistantInput" rows="1" maxlength="6000" placeholder="مثلاً: بدي مكتب قيمنق على شكل L، عرضه 200 سم..." required></textarea>
         <button class="btn btn-quiet assistant-voice" id="assistantVoice" type="button" aria-pressed="false">🎙️ محادثة صوتية</button><button class="btn btn-primary assistant-send" id="assistantSend" type="submit">إرسال ↑</button>
       </form>
-      <div class="assistant-hints"><button type="button" data-prompt="صمم لي خزانة ملابس حسب المقاسات التي سأعطيك إياها">خزانة ملابس</button><button type="button" data-prompt="بدي أصمم مكتب قيمنق من الصفر">مكتب قيمنق</button><button type="button" data-prompt="حلل الصورة المرفقة واقترح طريقة تصنيعها">حلّل صورة</button><button type="button" data-prompt="ساعدني بتصميم كنب زاوية حسب مساحة الغرفة">كنب زاوية</button></div>
+      <div class="assistant-hints"><button type="button" data-prompt="صمم لي خزانة ملابس حسب المقاسات التي سأعطيك إياها">خزانة ملابس</button><button type="button" data-prompt="بدي أصمم مكتب قيمنق من الصفر">مكتب قيمنق</button><button type="button" data-prompt="حلل الصورة المرفقة، واقترح أبعاداً معيارية تقديرية عند عدم وجود قياس مرجعي، وميّزها بوضوح عن القياسات المؤكدة.">حلّل صورة واقترح مقاسات</button><button type="button" data-prompt="ساعدني بتصميم كنب زاوية حسب مساحة الغرفة">كنب زاوية</button></div>
     </section>
     <div class="notice-card assistant-notice"><strong>طريقة العمل</strong><p>المهندس يبدأ بمسودة تصورية فور كتابة طلبك، ثم يسألك عن أهم معلومة ناقصة. الربط المباشر الحي مع AutoCAD وSketchUp يحتاج إضافة سطح مكتب محلية للبرنامجين؛ هذه المرحلة تجهّز المواصفات ولا تدّعي أنها رسمت داخل البرنامجين.</p></div>
   `;
@@ -101,7 +101,7 @@ export function renderDesignAssistant() {
       const summary=document.createElement('p');
       const parts=designDraft.design?.components || [];
       const missing=parts.filter(part=>Object.values(part.dimensions || {}).some(value=>value === null)).length;
-      summary.textContent='العناصر: '+parts.length+' · عناصر تنتظر قياسات: '+missing+' · '+(designDraft.validation?.readyForGeometry?'الأبعاد الأساسية مكتملة مبدئياً':'تحتاج استكمال أبعاد');
+      const dimensionSource=designDraft.design?.dimensionSource==='proposal'?'الأبعاد مقترحة تقديرياً وتحتاج مراجعة':designDraft.design?.dimensionSource==='user'?'الأبعاد من إدخال المستخدم':'مصدر الأبعاد غير محدد';\n      summary.textContent='العناصر: '+parts.length+' · عناصر تنتظر قياسات: '+missing+' · '+(designDraft.validation?.readyForGeometry?'الأبعاد الأساسية مكتملة مبدئياً':'تحتاج استكمال أبعاد')+' · '+dimensionSource;
       const exportButton=document.createElement('button');
       exportButton.type='button'; exportButton.className='btn btn-quiet'; exportButton.textContent='تنزيل ملف المسودة JSON';
       exportButton.addEventListener('click',()=>{
