@@ -16,7 +16,8 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
 
   function blankCatalog() {
     return {
-      version: 1,
+      version: 2,
+      assembly: { coordinateSystem: 'origin-bottom-left-back', units: 'mm', placementMode: 'explicit' },
       title: '',
       itemType: 'خزانة',
       width: 0, height: 0, depth: 0,
@@ -48,7 +49,10 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
   function selectedProject() { return projects.find(p => p.id === selected); }
   function hydrate(project) {
     const saved = project?.design_data?.manufacturing_catalog;
-    catalog = saved && saved.version === 1 ? JSON.parse(JSON.stringify(saved)) : blankCatalog();
+    catalog = saved && [1, 2].includes(saved.version) ? JSON.parse(JSON.stringify(saved)) : blankCatalog();
+    catalog.version = 2;
+    catalog.assembly ||= { coordinateSystem: 'origin-bottom-left-back', units: 'mm', placementMode: 'explicit' };
+    catalog.parts = (catalog.parts || []).map(part => ({ ...part, position: part.position || null, rotation: part.rotation || { x: 0, y: 0, z: 0 }, joinery: Array.isArray(part.joinery) ? part.joinery : [], hardware: Array.isArray(part.hardware) ? part.hardware : [] }));
     catalog.title ||= project?.title || '';
     catalog.itemType ||= project?.furniture_type || 'قطعة أثاث';
     dirty = false;
@@ -311,7 +315,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     root.querySelectorAll('[data-board]').forEach(el => el.addEventListener('change', () => { const key = el.dataset.board; catalog.board[key] = ['width','height','thickness','kerf'].includes(key) ? toMm(el.value) : key === 'available' ? number(el.value) : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-part-field]').forEach(el => el.addEventListener('change', () => { const row = el.closest('[data-part]'); const part = catalog.parts.find(p => p.id === row.dataset.part); const key = el.dataset.partField; part[key] = ['width','height'].includes(key) ? toMm(el.value) : key === 'qty' ? number(el.value) : key === 'grain' ? el.value === 'true' : el.value; markDirty(); render(); }));
     root.querySelectorAll('[data-remove-part]').forEach(el => el.onclick = () => { catalog.parts = catalog.parts.filter(p => p.id !== el.dataset.removePart); markDirty(); render(); });
-    root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', role: 'custom', width: 0, height: 0, qty: 1, grain: true }); markDirty(); render(); };
+    root.querySelector('[data-add-part]').onclick = () => { catalog.parts.push({ id: uid(), name: 'قطعة جديدة', role: 'custom', width: 0, height: 0, qty: 1, grain: true, position: null, rotation: { x: 0, y: 0, z: 0 }, joinery: [], hardware: [] }); markDirty(); render(); };
     root.querySelector('[data-notes]').addEventListener('change', e => { catalog.notes = e.target.value; markDirty(); });
     root.querySelector('[data-save]').onclick = save;
     root.querySelector('[data-export-cuts]').onclick = () => {
