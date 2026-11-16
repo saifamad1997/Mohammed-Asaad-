@@ -94,14 +94,14 @@ export function renderCadWorkspace() {
   root.querySelectorAll('[data-cad-view]').forEach(b=>b.onclick=()=>{byId('cadViews').dataset.view=b.dataset.cadView;root.querySelectorAll('[data-cad-view]').forEach(x=>x.classList.toggle('active',x===b));});
   byId('cadReset').onclick=()=>{Object.assign(state,{name:'وحدة أثاث جديدة',width:1200,height:800,depth:450,thickness:18,parts:[]});byId('cadName').value=state.name;byId('cadW').value=1200;byId('cadH').value=800;byId('cadD').value=450;byId('cadT').value=18;render();};
   function download(filename,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);}
-  byId('cadCsv').onclick=()=>{read();const rows=[['Part','Qty','Width_mm','Height_mm','Depth_mm','X_mm','Y_mm','Z_mm'],...state.parts.map(p=>[p.name,1,p.w,p.h,p.d,p.x,p.y,p.z])];const csv='\\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v).replaceAll('"','""')+'"').join(',')).join('\\r\\n');download('ma-cad-cut-list.csv',csv,'text/csv;charset=utf-8');};
+  byId('cadCsv').onclick=()=>{read();const rows=[['Part','Qty','Width_mm','Height_mm','Depth_mm','X_mm','Y_mm','Z_mm'],...state.parts.map(p=>[p.name,1,p.w,p.h,p.d,p.x,p.y,p.z])];const csv='\uFEFF'+rows.map(row=>row.map(v=>'\"'+String(v).replaceAll('\"','\"\"')+'\"').join(',')).join('\r\n');download('ma-cad-cut-list.csv',csv,'text/csv;charset=utf-8');};
   byId('cadJson').onclick=()=>{read();download('ma-cad-design.json',JSON.stringify({schema:'mo-asaad.cad-geometry',version:1,units:'mm',design:{name:state.name,dimensions:{width:state.width,height:state.height,depth:state.depth,thickness:state.thickness},components:state.parts}},null,2),'application/json');};
   byId('cadDxf').onclick=()=>{
     read();let dxf='0\nSECTION\n2\nENTITIES\n';
     const addLine=(x1,y1,x2,y2)=>{dxf+='0\nLINE\n8\n0\n10\n'+x1+'\n20\n'+y1+'\n30\n0\n11\n'+x2+'\n21\n'+y2+'\n31\n0\n';};
     const addRect=(x,y,w,h)=>{addLine(x,y,x+w,y);addLine(x+w,y,x+w,y+h);addLine(x+w,y+h,x,y+h);addLine(x,y+h,x,y);};
     addRect(0,0,state.width,state.height);
-    state.parts.forEach(p=>addRect(p.x,p.z,p.w,p.h));\n    dxf+='0\\nENDSEC\\n0\\nEOF\\n';
+    state.parts.forEach(p=>addRect(p.x,p.z,p.w,p.h));
     dxf+='0\nENDSEC\n0\nEOF\n';download('ma-cad-front-elevation.dxf',dxf,'application/dxf');
   };
   render();
