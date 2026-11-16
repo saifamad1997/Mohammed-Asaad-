@@ -123,8 +123,10 @@ export function renderDesignAssistant() {
         if (!preview.dataset.drawn) {
           const kind=String(designDraft.design?.kind||'').toLowerCase();
           const name=String(designDraft.design?.name||'');
-          const isSofa=/sofa|couch|كنب|كنبة|كنباي/.test(kind+' '+name+' '+String(designDraft.design?.description||''));
-          const isDesk=/desk|table|مكتب|طاولة/.test(kind+' '+name+' '+String(designDraft.design?.description||''));
+          const draftParts=designDraft.design?.components || [];
+          const detectionText=[kind,name,String(designDraft.design?.description||''),...draftParts.flatMap(part=>[part.name,part.type,part.category])].filter(Boolean).join(' ').toLowerCase();
+          const isSofa=/sofa|couch|كنب|كنبة|كنباي/.test(detectionText);
+          const isDesk=/desk|table|مكتب|طاولة|سطح المكتب|أرجل المكتب|desktop|workstation/.test(detectionText);
           if (isDesk) {
             const dims=designDraft.design?.dimensions || {};
             const width=Number(dims.width)||1600, depth=Number(dims.depth)||800, height=Number(dims.height)||750;
