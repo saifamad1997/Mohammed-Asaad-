@@ -67,8 +67,8 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     if (!String(board.material || '').trim()) errors.push('حدد نوع اللوح أو خامته قبل اعتماد الكتالوج.');
     if (!(number(board.thickness) > 0)) errors.push('أدخل سماكة اللوح الفعلية بالملليمتر.');
     for (const part of catalog.parts) {
-      const w = number(part.width), h = number(part.height), qty = Math.floor(number(part.qty));
-      if (!(w > 0 && h > 0 && qty > 0)) { errors.push('راجع مقاسات أو كمية القطعة: ' + (part.name || 'بدون اسم')); continue; }
+      const w = number(part.width), h = number(part.height), qty = number(part.qty);
+      if (!(w > 0 && h > 0 && Number.isInteger(qty) && qty > 0)) { errors.push('راجع مقاسات القطعة والكمية الصحيحة (عدد صحيح موجب): ' + (part.name || 'بدون اسم')); continue; }
       for (let i = 0; i < qty; i++) parts.push({ name: part.name || 'قطعة', width: w, height: h, grain: part.grain !== false, sourceId: part.id, index: i + 1 });
     }
     if (!parts.length) errors.push('أضف قطعة واحدة على الأقل إلى قائمة القص.');
@@ -115,7 +115,7 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
   function assemblyPreview() {
     const parts = catalog.parts.filter(p => number(p.width) > 0 && number(p.height) > 0 && number(p.qty) > 0);
     const missing = parts.filter(p => !p.position || !['x','y','z'].every(k => p.position[k] !== null && p.position[k] !== '' && Number.isFinite(Number(p.position[k]))));
-    const repeated = parts.filter(p => Math.floor(number(p.qty)) !== 1);
+    const repeated = parts.filter(p => number(p.qty) !== 1);
     return { parts, missing, repeated, complete: parts.length > 0 && missing.length === 0 && repeated.length === 0 };
   }
   function assemblyMarkup() {
