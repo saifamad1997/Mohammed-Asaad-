@@ -70,3 +70,5 @@
   .mfg-hero,.mfg-hero *,.mfg-section,.mfg-section *{visibility:hidden!important}
   #mfg-print-report,#mfg-print-report *{visibility:visible!important}
 }
+
+.mfg-import-row,.mfg-template-row{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px;padding:12px;border:1px dashed #b8cec3;border-radius:12px;background:#f8fbf9}.mfg-import-row small,.mfg-template-row small{flex:1 1 220px;color:#718078;font-size:11px;line-height:1.7}.mfg-template-row label{display:grid;gap:6px;min-width:170px;color:#52665a;font-size:12px;font-weight:700}.mfg-template-row select,.mfg-template-row input{padding:9px;border:1px solid #dce8e0;border-radius:9px;background:#fff;color:#263b32;font:inherit}.mfg-summary{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
