@@ -78,10 +78,28 @@ export default async function handler(req, res) {
     if (messages[messages.length - 1].role !== 'user' || !messages[messages.length - 1].content.trim() && !body.image) {
       return res.status(400).json({error:'اكتب رسالتك أو أرفق صورة أولاً.'});
     }
+    const responseSchema = {
+      type:"OBJECT",
+      properties:{
+        reply:{type:"STRING"},
+        designDraft:{
+          type:"OBJECT",nullable:true,
+          properties:{
+            kind:{type:"STRING"},name:{type:"STRING"},description:{type:"STRING"},
+            dimensions:{type:"OBJECT",properties:{width:{type:"NUMBER",nullable:true},depth:{type:"NUMBER",nullable:true},height:{type:"NUMBER",nullable:true}},required:["width","depth","height"]},
+            materials:{type:"ARRAY",items:{type:"OBJECT",properties:{name:{type:"STRING"},thicknessMm:{type:"NUMBER",nullable:true},source:{type:"STRING"}},required:["name","thicknessMm","source"]}},
+            components:{type:"ARRAY",items:{type:"OBJECT",properties:{id:{type:"STRING"},name:{type:"STRING"},role:{type:"STRING"},dimensions:{type:"OBJECT",properties:{width:{type:"NUMBER",nullable:true},depth:{type:"NUMBER",nullable:true},height:{type:"NUMBER",nullable:true}},required:["width","depth","height"]}},required:["id","name","role","dimensions"]}},
+            openQuestions:{type:"ARRAY",items:{type:"STRING"}}
+          },
+          required:["kind","name","description","dimensions","materials","components","openQuestions"]
+        }
+      },
+      required:["reply","designDraft"]
+    };
     const requestBody = JSON.stringify({
-      systemInstruction:{parts:[{text:SYSTEM_PROMPT}]},
+      systemInstruction:{parts:[{text:SYSTEM_PROMPT+"\\n\\nأخرج JSON فقط وفق المخطط. إذا كانت الرسالة ليست طلب تصميم أو متابعة تصميم فأعد designDraft=null. إذا كانت طلب تصميم، أنشئ مسودة أولية الآن. لا تضع أرقاماً لم يذكرها المستخدم: كل بُعد مجهول null. لا تضف مكونات بقياسات مخترعة. استخدم معرفات نصية ثابتة داخل المسودة مثل part-1. materials وcomponents وopenQuestions مصفوفات حتى لو فارغة."}]},
       contents,
-      generationConfig:{maxOutputTokens:1100,temperature:0.35}
+      generationConfig:{maxOutputTokens:1800,temperature:0.25,responseMimeType:"application/json",responseSchema}
     });
     const primaryModel = 'gemini-3.1-flash-lite';
     const fallbackModel = 'gemini-3.8-flash';
@@ -105,9 +123,62 @@ export default async function handler(req, res) {
       if (ai.status === 503) return res.status(503).json({error:'خدمة Gemini مشغولة حالياً، وحتى النموذج الاحتياطي لم يتمكن من الرد. انتظر قليلاً ثم أعد المحاولة.'});
       return res.status(502).json({error:'تعذر على Gemini إكمال الرد حالياً. حاول مرة أخرى بعد قليل.'});
     }
-    const reply = (result.candidates?.[0]?.content?.parts || []).map(part=>part.text || '').join('\\n').trim();
-    if (!reply) return res.status(502).json({error:'وصل رد فارغ من Gemini. حاول صياغة الطلب بطريقة أخرى.'});
-    return res.status(200).json({reply});
+    const raw = (result.candidates?.[0]?.content?.parts || []).map(part=>part.text || '').join('').trim();
+    if (!raw) return res.status(502).json({error:'وصل رد فارغ من Gemini. حاول صياغة الطلب بطريقة أخرى.'});
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { return res.status(502).json({error:'تعذر قراءة المسودة المنظمة من المساعد. أعد المحاولة.'}); }
+    const reply = typeof parsed.reply === 'string' ? parsed.reply.trim() : '';
+    if (!reply) return res.status(502).json({error:'وصل رد غير مكتمل من Gemini.'});
+    let designDraft = null;
+    if (parsed.designDraft && typeof parsed.designDraft === 'object') {
+      const cleanDimension = value => {
+        const number = typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
+        return number;
+      };
+      const dimensions = value => ({
+        width:cleanDimension(value?.width),
+        depth:cleanDimension(value?.depth),
+        height:cleanDimension(value?.height)
+      });
+      const source = value => ["user","measured-file","proposal","unknown"].includes(value) ? value : "unknown";
+      const materials = Array.isArray(parsed.designDraft.materials) ? parsed.designDraft.materials.slice(0,40).map((item,index)=>({
+        name:String(item?.name || "مادة غير محددة").slice(0,120),
+        thicknessMm:cleanDimension(item?.thicknessMm),
+        source:source(item?.source)
+      })) : [];
+      const components = Array.isArray(parsed.designDraft.components) ? parsed.designDraft.components.slice(0,100).map((item,index)=>({
+        id:String(item?.id || "component-"+(index+1)).slice(0,80),
+        name:String(item?.name || "عنصر").slice(0,120),
+        role:String(item?.role || "unspecified").slice(0,120),
+        dimensions:dimensions(item?.dimensions)
+      })) : [];
+      const topDimensions = dimensions(parsed.designDraft.dimensions);
+      const allGeometryDimensionsKnown = components.length > 0 && components.every(item => Object.values(item.dimensions).every(value => value !== null));
+      const issues = [];
+      if (!components.length) issues.push("لا توجد عناصر محددة بأبعاد هندسية.");
+      if (components.some(item => Object.values(item.dimensions).some(value => value === null))) issues.push("بعض العناصر ينقصها بُعد واحد أو أكثر؛ لم تُنشأ لها هندسة.");
+      designDraft = {
+        protocol:"mo-asaad.cad-bridge",version:1,
+        draftId:globalThis.crypto?.randomUUID?.() || "draft-"+Date.now()+"-"+Math.random().toString(16).slice(2),
+        createdAt:new Date().toISOString(),status:"draft",
+        source:{kind:"ai-assistant",projectId:null},
+        units:{length:"mm",angle:"degree"},
+        design:{
+          kind:String(parsed.designDraft.kind || "custom-furniture").slice(0,80),
+          name:String(parsed.designDraft.name || "مسودة تصميم").slice(0,160),
+          description:String(parsed.designDraft.description || "").slice(0,3000),
+          dimensions:topDimensions,materials,components,
+          openQuestions:Array.isArray(parsed.designDraft.openQuestions) ? parsed.designDraft.openQuestions.slice(0,30).map(q=>String(q).slice(0,500)) : []
+        },
+        targets:["autocad","sketchup"],
+        validation:{
+          readyForGeometry:allGeometryDimensionsKnown,
+          readyForManufacturing:false,
+          issues
+        }
+      };
+    }
+    return res.status(200).json({reply,designDraft});
   } catch (error) {
     console.error('Design assistant error',error);
     return res.status(400).json({error:error?.message||'تعذر معالجة الطلب.'});
