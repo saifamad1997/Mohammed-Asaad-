@@ -47,8 +47,13 @@ module MohammedAsaad
       root.set_attribute(DICT, 'project_no', project['project_no'].to_s)
       root.set_attribute(DICT, 'catalog_version', catalog['version'].to_i)
 
+      placed_mode = parts.all? do |part|
+        pos = part['position']
+        qty = part['qty'].to_i
+        qty == 1 && pos.is_a?(Hash) && %w[x y z].all? { |axis| pos.key?(axis) && !pos[axis].nil? && pos[axis].to_s != '' }
+      end
       parts_group = root.entities.add_group
-      parts_group.name = 'قائمة القطع - عرض منفصل غير مركب'
+      parts_group.name = placed_mode ? 'قطع بمواضع XYZ المدخلة — تجميع مبدئي' : 'قائمة القطع — عرض منفصل غير مركب'
       spacing = 80.mm
       cursor_x = 0.mm
       cursor_y = 0.mm
@@ -81,18 +86,30 @@ module MohammedAsaad
           component.set_attribute(DICT, 'quantity_index', index + 1)
 
           pts = [
-            Geom::Point3d.new(cursor_x, cursor_y, 0),
-            Geom::Point3d.new(cursor_x + w, cursor_y, 0),
-            Geom::Point3d.new(cursor_x + w, cursor_y + h, 0),
-            Geom::Point3d.new(cursor_x, cursor_y + h, 0)
+            Geom::Point3d.new(0, 0, 0),
+            Geom::Point3d.new(w, 0, 0),
+            Geom::Point3d.new(w, h, 0),
+            Geom::Point3d.new(0, h, 0)
           ]
           face = component.entities.add_face(pts)
           raise "تعذر إنشاء القطعة: #{part['name']}" unless face
           face.reverse! if face.normal.z < 0
           face.pushpull(t)
-
-          cursor_x += w + spacing
-          row_depth = [row_depth, h].max
+          if placed_mode
+            pos = part['position']
+            origin = Geom::Point3d.new(mm(pos['x']), mm(pos['y']), mm(pos['z']))
+            angle = part.dig('rotation', 'z').to_f.degrees
+            transform = Geom::Transformation.translation(origin) * Geom::Transformation.rotation(ORIGIN, Z_AXIS, angle)
+            component.transform!(transform)
+            component.set_attribute(DICT, 'position_x_mm', pos['x'].to_f)
+            component.set_attribute(DICT, 'position_y_mm', pos['y'].to_f)
+            component.set_attribute(DICT, 'position_z_mm', pos['z'].to_f)
+            component.set_attribute(DICT, 'rotation_z_degrees', part.dig('rotation', 'z').to_f)
+          else
+            component.transform!(Geom::Transformation.translation([cursor_x, cursor_y, 0]))
+            cursor_x += w + spacing
+            row_depth = [row_depth, h].max
+          end
           created += 1
         end
       end
@@ -101,8 +118,7 @@ module MohammedAsaad
       model.commit_operation
       operation_started = false
       model.active_view.zoom_extents
-      UI.messagebox("تم استيراد #{created} مكوّناً.
-هذه معاينة ألواح منفصلة حسب قائمة القص، وليست تجميعاً نهائياً للأثاث.")
+      UI.messagebox(placed_mode ? "تم استيراد #{created} قطعة وفق مواضع XYZ والدوران Z المدخلة.\nهذا نموذج مواضع أولي فقط؛ لا يثبت صحة الوصلات أو الثقوب أو الإكسسوارات." : "تم استيراد #{created} مكوّناً في ترتيب منفصل حسب قائمة القص.\nلم تكتمل مواضع XYZ لكل القطع، لذلك لم يتم إنشاء تجميع.")
     rescue StandardError => e
       model.abort_operation if model && operation_started
       UI.messagebox("تعذر الاستيراد:\n#{e.message}")
