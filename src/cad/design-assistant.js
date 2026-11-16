@@ -30,7 +30,18 @@ export function renderDesignAssistant() {
   const attachment = root.querySelector('#assistantAttachment');
   const sendButton = root.querySelector('#assistantSend');
   let history = loadHistory();
-  let pendingImage = null;\n  let voiceSocket = null;\n  let voiceStream = null;\n  let voiceContext = null;\n  let voiceSource = null;\n  let voiceProcessor = null;\n  let voiceMute = null;\n  let voicePlaybackAt = 0;\n  let voiceSources = [];\n  let voiceStarting = false;\n  const voiceButton = root.querySelector('#assistantVoice');\n  const voiceStatus = root.querySelector('#assistantVoiceStatus');
+  let pendingImage = null;
+  let voiceSocket = null;
+  let voiceStream = null;
+  let voiceContext = null;
+  let voiceSource = null;
+  let voiceProcessor = null;
+  let voiceMute = null;
+  let voicePlaybackAt = 0;
+  let voiceSources = [];
+  let voiceStarting = false;
+  const voiceButton = root.querySelector('#assistantVoice');
+  const voiceStatus = root.querySelector('#assistantVoiceStatus');
 
   function loadHistory() {
     try { const value = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(value) ? value.slice(-MAX_HISTORY) : []; }
