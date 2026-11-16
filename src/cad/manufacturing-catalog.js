@@ -155,11 +155,49 @@ export async function mountManufacturingCatalog(root, { supabase, user }) {
     const project = selectedProject();
     if (!project) {
       root.innerHTML = `
-        <section class="mfg-hero"><div><span class="mfg-kicker">MANUFACTURING CATALOG</span><h2>من التصميم إلى ورقة النجار</h2><p>اختر مشروعاً لفتح كتالوج التصنيع الخاص به، أو ابدأ بمشروع جديد من قسم المشاريع.</p></div></section>
-        <section class="section-card"><div class="section-heading"><div><h2>مشاريع الشركة</h2><p>كل مشروع يحتفظ بكتالوجه وبيانات التصنيع.</p></div></div>
-          <div class="mfg-project-list">${projects.map(p => `<button class="mfg-project" data-project="${esc(p.id)}"><strong>${esc(projectLabel(p))}</strong><span>${esc(p.furniture_type || 'نوع الأثاث غير محدد')}</span><b>فتح الكتالوج ←</b></button>`).join('') || '<p class="muted">لا توجد مشاريع. أنشئ مشروعاً أولاً.</p>'}</div>
+        <section class="mfg-hero"><div><span class="mfg-kicker">MANUFACTURING WORKSPACE</span><h2>من التصميم إلى ورقة النجار</h2><p>ابدأ قطعة أثاث من الصفر، أو أكمل كتالوج تصنيع محفوظاً داخل مشروع سابق.</p></div></section>
+        <section class="section-card mfg-section">
+          <div class="section-heading"><div><h2>ابدأ العمل</h2><p>لا تحتاج إلى تسجيل عميل أو إنشاء مشروع مسبقاً من قسم آخر.</p></div></div>
+          <form class="mfg-new-project" data-new-project>
+            <label>اسم التصميم<input name="title" required maxlength="120" placeholder="مثال: خزانة غرفة النوم"></label>
+            <label>نوع الأثاث<input name="furniture_type" required maxlength="80" placeholder="خزانة، مطبخ، مكتب، سرير…"></label>
+            <button class="btn btn-primary" type="submit">＋ بدء تصميم جديد</button>
+            <p class="muted" data-create-feedback>سيُنشأ ملف مشروع مستقل ويحفظ كتالوج التصنيع داخله.</p>
+          </form>
+        </section>
+        <section class="section-card"><div class="section-heading"><div><h2>فتح مشروع سابق</h2><p>كل مشروع يحتفظ بكتالوجه وبيانات التصنيع الخاصة به.</p></div></div>
+          <div class="mfg-project-list">${projects.map(p => `<button class="mfg-project" data-project="${esc(p.id)}"><strong>${esc(projectLabel(p))}</strong><span>${esc(p.furniture_type || 'نوع الأثاث غير محدد')}</span><b>فتح الكتالوج ←</b></button>`).join('') || '<p class="muted">لا توجد مشاريع محفوظة بعد. ابدأ تصميمك الأول من النموذج أعلاه.</p>'}</div>
         </section>`;
       root.querySelectorAll('[data-project]').forEach(b => b.onclick = () => { selected = b.dataset.project; hydrate(selectedProject()); render(); });
+      root.querySelector('[data-new-project]').addEventListener('submit', async event => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const button = form.querySelector('button[type="submit"]');
+        const feedback = form.querySelector('[data-create-feedback]');
+        const values = Object.fromEntries(new FormData(form).entries());
+        button.disabled = true;
+        button.textContent = 'جارٍ إنشاء التصميم…';
+        feedback.textContent = 'يتم إنشاء ملف التصميم وحفظه…';
+        try {
+          const { data, error } = await supabase.from('projects').insert({
+            owner_id: user.id,
+            title: String(values.title || '').trim(),
+            furniture_type: String(values.furniture_type || '').trim(),
+            status: 'design',
+            description: 'تم إنشاء المشروع مباشرة من قسم التصميم الهندسي والتصنيع.'
+          }).select('id,project_no,title,furniture_type,status,design_data,created_at').single();
+          if (error) throw error;
+          if (!data?.id) throw new Error('لم يرجع النظام ملف المشروع بعد الإنشاء.');
+          projects.unshift(data);
+          selected = data.id;
+          hydrate(data);
+          render();
+        } catch (error) {
+          feedback.textContent = 'تعذر إنشاء التصميم: ' + (error?.message || 'خطأ غير معروف');
+          button.disabled = false;
+          button.textContent = '＋ بدء تصميم جديد';
+        }
+      });
       return;
     }
     const layout = computeLayout();
