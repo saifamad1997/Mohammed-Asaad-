@@ -113,12 +113,31 @@ export function renderCadWorkspace() {
   byId('cadCsv').onclick=()=>{read();const rows=[['Part','Qty','Width_mm','Height_mm','Depth_mm','X_mm','Y_mm','Z_mm'],...state.parts.map(p=>[p.name,1,p.w,p.h,p.d,p.x,p.y,p.z])];const csv='\uFEFF'+rows.map(row=>row.map(v=>'\"'+String(v).replaceAll('\"','\"\"')+'\"').join(',')).join('\r\n');download('ma-cad-cut-list.csv',csv,'text/csv;charset=utf-8');};
   byId('cadJson').onclick=()=>{read();download('ma-cad-design.json',JSON.stringify({schema:'mo-asaad.cad-geometry',version:1,units:'mm',design:{name:state.name,dimensions:{width:state.width,height:state.height,depth:state.depth,thickness:state.thickness},components:state.parts}},null,2),'application/json');};
   byId('cadDxf').onclick=()=>{
-    read();let dxf='0\nSECTION\n2\nENTITIES\n';
-    const addLine=(x1,y1,x2,y2)=>{dxf+='0\nLINE\n8\n0\n10\n'+x1+'\n20\n'+y1+'\n30\n0\n11\n'+x2+'\n21\n'+y2+'\n31\n0\n';};
-    const addRect=(x,y,w,h)=>{addLine(x,y,x+w,y);addLine(x+w,y,x+w,y+h);addLine(x+w,y+h,x,y+h);addLine(x,y+h,x,y);};
-    addRect(0,0,state.width,state.height);
-    state.parts.forEach(p=>addRect(p.x,p.z,p.w,p.h));
-    dxf+='0\nENDSEC\n0\nEOF\n';download('ma-cad-front-elevation.dxf',dxf,'application/dxf');
+    read();
+    const entities=[];
+    const line=(x1,y1,x2,y2,layer)=>entities.push({type:'LINE',layer,x1,y1,x2,y2});
+    const rect=(x,y,w,h,layer)=>{line(x,y,x+w,y,layer);line(x+w,y,x+w,y+h,layer);line(x+w,y+h,x,y+h,layer);line(x,y+h,x,y,layer);};
+    const label=(x,y,value,height,layer='LABELS')=>entities.push({type:'TEXT',layer,x,y,value,height});
+    const gap=180,W=state.width,H=state.height,D=state.depth,sideX=W+gap,topY=H+gap;
+    rect(0,0,W,H,'OUTLINE'); state.parts.forEach(p=>rect(p.x,p.z,p.w,p.h,'PARTS'));
+    label(0,H+55,'FRONT ELEVATION',28);
+    rect(sideX,0,D,H,'OUTLINE'); state.parts.forEach(p=>rect(sideX+p.y,p.z,p.d,p.h,'PARTS'));
+    label(sideX,H+55,'SIDE ELEVATION',28);
+    rect(0,topY,W,D,'OUTLINE'); state.parts.forEach(p=>rect(p.x,topY+p.y,p.w,p.d,'PARTS'));
+    label(0,topY+D+55,'TOP PLAN',28);
+    label(0,-65,'UNITS: mm | '+state.name,22);
+    label(W/2,-105,'W '+W+' mm / H '+H+' mm',18,'DIMENSIONS');
+    label(sideX+D/2,-65,'D '+D+' mm',18,'DIMENSIONS');
+    const layers=['OUTLINE','PARTS','LABELS','DIMENSIONS'];
+    let dxf='0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n70\n'+layers.length+'\n';
+    layers.forEach((name,i)=>{dxf+='0\nLAYER\n2\n'+name+'\n70\n0\n62\n'+(i+1)+'\n6\nCONTINUOUS\n';});
+    dxf+='0\nENDTAB\n0\nENDSEC\n0\nSECTION\n2\nENTITIES\n';
+    for(const e of entities){
+      if(e.type==='LINE') dxf+='0\nLINE\n8\n'+e.layer+'\n10\n'+e.x1+'\n20\n'+e.y1+'\n30\n0\n11\n'+e.x2+'\n21\n'+e.y2+'\n31\n0\n';
+      else dxf+='0\nTEXT\n8\n'+e.layer+'\n10\n'+e.x+'\n20\n'+e.y+'\n30\n0\n40\n'+e.height+'\n1\n'+String(e.value).replace(/[\r\n]/g,' ')+'\n';
+    }
+    dxf+='0\nENDSEC\n0\nEOF\n';
+    download('ma-cad-three-views-mm.dxf',dxf,'application/dxf');
   };
   render();
 }
