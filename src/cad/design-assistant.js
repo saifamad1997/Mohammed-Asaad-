@@ -124,7 +124,29 @@ export function renderDesignAssistant() {
           const kind=String(designDraft.design?.kind||'').toLowerCase();
           const name=String(designDraft.design?.name||'');
           const isSofa=/sofa|couch|كنب|كنبة|كنباي/.test(kind+' '+name+' '+String(designDraft.design?.description||''));
-          if (isSofa) {
+          const isDesk=/desk|table|مكتب|طاولة/.test(kind+' '+name+' '+String(designDraft.design?.description||''));
+          if (isDesk) {
+            const dims=designDraft.design?.dimensions || {};
+            const width=Number(dims.width)||1600, depth=Number(dims.depth)||800, height=Number(dims.height)||750;
+            const top=36, leg=50, apron=100;
+            const sx=250/Math.max(width,depth), sy=190/Math.max(width,depth);
+            const X=width*sx, Y=depth*sy, Z=height*.22;
+            const p=(x,y,z)=>[260+(x-y)*.55,275-(x+y)*.25-z*.22];
+            const poly=(pts,fill,stroke='#315b58')=>'<polygon points="'+pts.map(v=>p(...v).join(',')).join(' ')+'" fill="'+fill+'" stroke="'+stroke+'" stroke-width="2"/>';
+            const topZ=height-top;
+            const shapes=[];
+            shapes.push(poly([[0,0,topZ],[width,0,topZ],[width,depth,topZ],[0,depth,topZ]],'#c99b68'));
+            shapes.push(poly([[0,0,height],[width,0,height],[width,depth,height],[0,depth,height]],'#e1b987'));
+            shapes.push(poly([[0,0,topZ],[width,0,topZ],[width,0,height],[0,0,height]],'#b78350'));
+            shapes.push(poly([[width,0,topZ],[width,depth,topZ],[width,depth,height],[width,0,height]],'#986b45'));
+            const inset=55, legTop=topZ-apron;
+            [[inset,inset],[width-inset-leg,inset],[inset,depth-inset-leg],[width-inset-leg,depth-inset-leg]].forEach(([x,y])=>{
+              shapes.push(poly([[x,y,0],[x+leg,y,0],[x+leg,y,legTop],[x,y,legTop]],'#536b69'));
+              shapes.push(poly([[x+leg,y,0],[x+leg,y+leg,0],[x+leg,y+leg,legTop],[x+leg,y,legTop]],'#3e5553'));
+            });
+            shapes.push(poly([[inset,inset,legTop],[width-inset,inset,legTop],[width-inset,inset,topZ],[inset,inset,topZ]],'#9c704c'));
+            preview.innerHTML='<div class="ma-desk-stage"><svg viewBox="0 0 520 340" role="img" aria-label="مجسم تصوري ثلاثي الأبعاد لمكتب بأربعة أرجل وسطح مستطيل">'+shapes.join('')+'</svg></div><p class="ma-sofa-dimensions">الأبعاد المقترحة: '+width+' × '+depth+' × '+height+' مم · سطح '+top+' مم · أرجل '+leg+' × '+leg+' مم</p><p class="ma-desk-note">مجسم تصوري قابل للتعديل؛ راجع توزيع الأرجل والتدعيمات قبل التصنيع.</p>';
+          } else if (isSofa) {
             const dims=designDraft.design?.dimensions || {};
             const width=Number(dims.width)||2200, depth=Number(dims.depth)||900, height=Number(dims.height)||850;
             const scale=Math.max(0.55,Math.min(1.15,2200/Math.max(width,depth,height)));
