@@ -101,7 +101,8 @@ export function renderDesignAssistant() {
       const summary=document.createElement('p');
       const parts=designDraft.design?.components || [];
       const missing=parts.filter(part=>Object.values(part.dimensions || {}).some(value=>value === null)).length;
-      const dimensionSource=designDraft.design?.dimensionSource==='proposal'?'الأبعاد مقترحة تقديرياً وتحتاج مراجعة':designDraft.design?.dimensionSource==='user'?'الأبعاد من إدخال المستخدم':'مصدر الأبعاد غير محدد';\n      summary.textContent='العناصر: '+parts.length+' · عناصر تنتظر قياسات: '+missing+' · '+(designDraft.validation?.readyForGeometry?'الأبعاد الأساسية مكتملة مبدئياً':'تحتاج استكمال أبعاد')+' · '+dimensionSource;
+      const dimensionSource=designDraft.design?.dimensionSource==='proposal'?'الأبعاد مقترحة تقديرياً وتحتاج مراجعة':designDraft.design?.dimensionSource==='user'?'الأبعاد من إدخال المستخدم':'مصدر الأبعاد غير محدد';
+      summary.textContent='العناصر: '+parts.length+' · عناصر تنتظر قياسات: '+missing+' · '+(designDraft.validation?.readyForGeometry?'الأبعاد الأساسية مكتملة مبدئياً':'تحتاج استكمال أبعاد')+' · '+dimensionSource;
       const exportButton=document.createElement('button');
       exportButton.type='button'; exportButton.className='btn btn-quiet'; exportButton.textContent='تنزيل ملف المسودة JSON';
       exportButton.addEventListener('click',()=>{
