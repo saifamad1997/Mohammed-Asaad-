@@ -26,7 +26,7 @@ export function renderCadWorkspace() {
         <label>Z<input id="cadPZ" type="number" value="0"></label><label>عرض<input id="cadPW" type="number" value="18"></label>
         <label>ارتفاع<input id="cadPH" type="number" value="800"></label><label>عمق<input id="cadPD" type="number" value="450"></label>
       </div>
-      <button class="btn cad-full" id="cadAddPart">＋ إضافة مكوّن</button>
+      <button class="btn cad-full" id="cadAddPart">＋ إضافة مكوّن</button><button class="btn cad-full" id="cadSavePart" disabled>حفظ تعديل المكوّن</button>
       <div id="cadParts" class="cad-parts"></div><section class="cad-cutlist"><h3>قائمة القص المبدئية</h3><div id="cadCutlist"></div></section>
       <p class="cad-warning">المقاسات الافتراضية للبدء فقط. راجع كل مكوّن وسماكة الخامة والوصلات قبل اعتماد التصنيع.</p>
     </aside>
@@ -67,13 +67,15 @@ export function renderCadWorkspace() {
     byId('cadStatus').textContent='تم تحديث الرسم · '+state.parts.length+' مكوّن · '+fmt(W)+' × '+fmt(H)+' × '+fmt(D)+' mm';
   }
   function renderParts(){
-    byId('cadParts').innerHTML=state.parts.map(p=>`<div class="cad-part-row"><span><b>${esc(p.name)}</b><small>${p.w}×${p.h}×${p.d} مم · X ${p.x}, Y ${p.y}, Z ${p.z}</small></span><button data-del-part="${p.id}" aria-label="حذف المكوّن">×</button></div>`).join('')||'<small class="muted">لا توجد مكوّنات مضافة بعد.</small>';
+    byId('cadParts').innerHTML=state.parts.map(p=>`<div class="cad-part-row"><button class="cad-part-select" data-edit-part="${p.id}"><b>${esc(p.name)}</b><small>${p.w}×${p.h}×${p.d} مم · X ${p.x}, Y ${p.y}, Z ${p.z}</small></button><button data-del-part="${p.id}" aria-label="حذف المكوّن">×</button></div>`).join('')||'<small class="muted">لا توجد مكوّنات مضافة بعد.</small>';
+    byId('cadParts').querySelectorAll('[data-edit-part]').forEach(b=>b.onclick=()=>{const p=state.parts.find(x=>x.id===b.dataset.editPart);if(!p)return;editingPartId=p.id;byId('cadPartName').value=p.name;byId('cadPX').value=p.x;byId('cadPY').value=p.y;byId('cadPZ').value=p.z;byId('cadPW').value=p.w;byId('cadPH').value=p.h;byId('cadPD').value=p.d;byId('cadSavePart').disabled=false;byId('cadAddPart').disabled=true;});
     byId('cadParts').querySelectorAll('[data-del-part]').forEach(b=>b.onclick=()=>{state.parts=state.parts.filter(p=>p.id!==b.dataset.delPart);render();});
     const total=state.parts.reduce((a,p)=>a+p.w*p.h*p.d,0);
     byId('cadCutlist').innerHTML=state.parts.length?'<table class="cad-table"><thead><tr><th>القطعة</th><th>عدد</th><th>W</th><th>H</th><th>D</th></tr></thead><tbody>'+state.parts.map(p=>'<tr><td>'+esc(p.name)+'</td><td>1</td><td>'+p.w+'</td><td>'+p.h+'</td><td>'+p.d+'</td></tr>').join('')+'</tbody></table><small>الحجم الإجمالي التقريبي: '+fmt(total/1000000)+' لتر</small>':'<small>أضف مكونات لعرض جدول القص.</small>';
   }
   byId('cadApply').onclick=()=>{read();render();};
   byId('cadAddPart').onclick=()=>{read();const v=id=>mm(byId(id).value);state.parts.push({id:uid(),name:byId('cadPartName').value.trim()||'مكوّن',x:v('cadPX'),y:v('cadPY'),z:v('cadPZ'),w:v('cadPW'),h:v('cadPH'),d:v('cadPD')});render();};
+  byId('cadSavePart').onclick=()=>{const p=state.parts.find(x=>x.id===editingPartId);if(!p)return;const v=id=>mm(byId(id).value);Object.assign(p,{name:byId('cadPartName').value.trim()||'مكوّن',x:v('cadPX'),y:v('cadPY'),z:v('cadPZ'),w:v('cadPW'),h:v('cadPH'),d:v('cadPD')});editingPartId=null;byId('cadSavePart').disabled=true;byId('cadAddPart').disabled=false;render();};
   root.querySelectorAll('[data-cad-view]').forEach(b=>b.onclick=()=>{byId('cadViews').dataset.view=b.dataset.cadView;root.querySelectorAll('[data-cad-view]').forEach(x=>x.classList.toggle('active',x===b));});
   byId('cadReset').onclick=()=>{Object.assign(state,{name:'وحدة أثاث جديدة',width:1200,height:800,depth:450,thickness:18,parts:[]});byId('cadName').value=state.name;byId('cadW').value=1200;byId('cadH').value=800;byId('cadD').value=450;byId('cadT').value=18;render();};
   function download(filename,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),500);}
