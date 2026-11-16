@@ -80,7 +80,7 @@ export default async function handler(req, res) {
         'content-type':'application/json',
         'x-api-key':apiKey,
         'anthropic-version':'2023-06-01',
-        'anthropic-workspace-id':'wrkspc_01JJRWMFVBLBgMUPR8zxinGw'
+        'anthropic-workspace-id':'wrkspc_01FDNUoyYxxqhy7A1iTyUorq'
       },
       body:requestBody
     });
