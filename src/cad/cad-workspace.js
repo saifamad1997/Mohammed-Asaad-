@@ -41,7 +41,8 @@ export function renderCadWorkspace() {
       <div class="cad-status" id="cadStatus">جاهز للرسم · كل الأبعاد بالملليمتر</div>
     </section>
   </div>`;
-  const byId=id=>root.querySelector('#'+id);\n  let editingPartId=null;
+  const byId=id=>root.querySelector('#'+id);
+  let editingPartId=null;
   function read(){
     state.name=byId('cadName').value.trim()||'تصميم بدون اسم';
     state.width=mm(byId('cadW').value);state.height=mm(byId('cadH').value);state.depth=mm(byId('cadD').value);state.thickness=mm(byId('cadT').value);
