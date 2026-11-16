@@ -52,7 +52,7 @@ module MohammedAsaad
         pos = part['position']
         qty_value = Float(part['qty']) rescue 0
         part['width'].to_f.positive? && part['height'].to_f.positive? && qty_value == 1 &&
-          pos.is_a?(Hash) && %w[x y z].all? { |axis| pos.key?(axis) && !pos[axis].nil? && pos[axis].to_s != '' }
+          pos.is_a?(Hash) && %w[x y z].all? { |axis| pos.key?(axis) && !pos[axis].nil? && pos[axis].to_s != '' } && %w[xy xz yz].include?(part.dig('orientation', 'plane'))
       end
       parts_group = root.entities.add_group
       parts_group.name = placed_mode ? 'ألواح بمواضع XYZ المدخلة — دون وصلات' : 'قائمة القطع — عرض منفصل غير مركب'
@@ -101,9 +101,22 @@ module MohammedAsaad
           if placed_mode
             pos = part['position']
             origin = Geom::Point3d.new(mm(pos['x']), mm(pos['y']), mm(pos['z']))
+            plane = part.dig('orientation', 'plane')
+            axes = case plane
+                   when 'xy'
+                     [Geom::Vector3d.new(1, 0, 0), Geom::Vector3d.new(0, 1, 0), Geom::Vector3d.new(0, 0, 1)]
+                   when 'xz'
+                     [Geom::Vector3d.new(1, 0, 0), Geom::Vector3d.new(0, 0, 1), Geom::Vector3d.new(0, -1, 0)]
+                   when 'yz'
+                     [Geom::Vector3d.new(0, 1, 0), Geom::Vector3d.new(0, 0, 1), Geom::Vector3d.new(1, 0, 0)]
+                   else
+                     raise "مستوى لوح غير مدعوم: #{plane}"
+                   end
+            plane_transform = Geom::Transformation.axes(origin, *axes)
             angle = part.dig('rotation', 'z').to_f.degrees
-            transform = Geom::Transformation.translation(origin) * Geom::Transformation.rotation(ORIGIN, Z_AXIS, angle)
-            component.transform!(transform)
+            local_rotation = Geom::Transformation.rotation(ORIGIN, Z_AXIS, angle)
+            component.transform!(plane_transform * local_rotation)
+            component.set_attribute(DICT, 'panel_plane', plane)
             component.set_attribute(DICT, 'position_x_mm', pos['x'].to_f)
             component.set_attribute(DICT, 'position_y_mm', pos['y'].to_f)
             component.set_attribute(DICT, 'position_z_mm', pos['z'].to_f)
