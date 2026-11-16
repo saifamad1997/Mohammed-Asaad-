@@ -1,5 +1,6 @@
-const STORAGE_KEY = 'ma-design-assistant-chat-v1';
-const MAX_HISTORY = 18;
+const STORAGE_KEY = 'ma-design-assistant-conversations-v2';
+const LEGACY_KEY = 'ma-design-assistant-chat-v1';
+const MAX_HISTORY = 40;
 
 export function renderDesignAssistant() {
   const root = document.querySelector('#pageContent');
@@ -10,7 +11,7 @@ export function renderDesignAssistant() {
       <p>مساعد متخصص بالأثاث والنجارة والتنجيد والمعادن. اكتب باللهجة اللي تريحك، أو أرفق صورة أو رسمة.</p></div>
     </section>
     <section class="assistant-shell">
-      <div class="assistant-chat-head"><div><strong>مساعد التصميم الهندسي</strong><small><span class="assistant-live-dot"></span> جاهز لمناقشة فكرتك</small></div><button type="button" class="btn btn-quiet" id="assistantClear">محادثة جديدة</button></div>
+      <div class="assistant-chat-head"><div><strong>مساعد التصميم الهندسي</strong><small><span class="assistant-live-dot"></span> جاهز لمناقشة فكرتك</small></div><select id="assistantChats" class="assistant-chat-select" aria-label="المحادثات السابقة"></select><button type="button" class="btn btn-primary" id="assistantClear">＋ محادثة جديدة</button></div>
       <div class="assistant-messages" id="assistantMessages" aria-live="polite"></div>
       <div class="assistant-voice-status" id="assistantVoiceStatus" hidden aria-live="polite">المحادثة الصوتية متوقفة</div>\n      <div class="assistant-attachment" id="assistantAttachment" hidden></div>
       <form class="assistant-composer" id="assistantForm">
@@ -29,7 +30,11 @@ export function renderDesignAssistant() {
   const imageInput = root.querySelector('#assistantImage');
   const attachment = root.querySelector('#assistantAttachment');
   const sendButton = root.querySelector('#assistantSend');
-  let history = loadHistory();
+  let conversations = loadConversations();
+  let activeChatId = conversations[0]?.id || createChat().id;
+  let history = activeChat().messages;
+  let sendQueue = [];
+  let processingQueue = false;
   let pendingImage = null;
   let voiceSocket = null;
   let voiceStream = null;
@@ -43,13 +48,40 @@ export function renderDesignAssistant() {
   const voiceButton = root.querySelector('#assistantVoice');
   const voiceStatus = root.querySelector('#assistantVoiceStatus');
 
-  function loadHistory() {
-    try { const value = JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(value) ? value.slice(-MAX_HISTORY) : []; }
-    catch { return []; }
+  function createChat() {
+    const chat = { id: (globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random()), title: 'محادثة جديدة', updatedAt: Date.now(), messages: [] };
+    conversations.unshift(chat);
+    return chat;
+  }
+  function activeChat() { return conversations.find(chat => chat.id === activeChatId) || conversations[0]; }
+  function loadConversations() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (Array.isArray(saved) && saved.length) return saved;
+      const legacy = JSON.parse(sessionStorage.getItem(LEGACY_KEY) || '[]');
+      return [{id:String(Date.now()),title:legacy.find(m=>m.role==='user')?.content?.slice(0,32)||'محادثتي السابقة',updatedAt:Date.now(),messages:Array.isArray(legacy)?legacy:[]}];
+    } catch { return []; }
   }
   function saveHistory() {
-    const safe = history.slice(-MAX_HISTORY).map(({role,content}) => ({role,content}));
-    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(safe)); } catch {}
+    const chat = activeChat();
+    if (!chat) return;
+    chat.messages = history.slice(-MAX_HISTORY);
+    const firstUser = history.find(m=>m.role==='user');
+    if (firstUser && chat.title === 'محادثة جديدة') chat.title = firstUser.content.slice(0,32) || 'محادثة جديدة';
+    chat.updatedAt = Date.now();
+    conversations.sort((a,b)=>b.updatedAt-a.updatedAt);
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.slice(0,50))); } catch {}
+    renderChatChoices();
+  }
+  function renderChatChoices() {
+    const select = root.querySelector('#assistantChats');
+    if (!select) return;
+    select.innerHTML = conversations.map(chat => '<option value="'+chat.id.replace(/"/g,'')+'" '+(chat.id===activeChatId?'selected':'')+'>'+String(chat.title||'محادثة').replace(/[&<>]/g,'')+'</option>').join('');
+  }
+  function switchChat(id) {
+    const chat = conversations.find(item=>item.id===id);
+    if (!chat || processingQueue) return;
+    activeChatId=id; history=chat.messages; paint(); renderChatChoices();
   }
   function addMessage(role, content, imageUrl) {
     const item = document.createElement('article');
@@ -73,7 +105,9 @@ export function renderDesignAssistant() {
       messagesEl.append(welcome);
     } else history.forEach(m=>addMessage(m.role,m.content,m.preview));
   }
+  renderChatChoices();
   paint();
+  root.querySelector("#assistantChats").addEventListener("change",e=>switchChat(e.target.value));
 
   function setVoiceStatus(message, active = false) {
     voiceStatus.hidden = false;
@@ -224,7 +258,7 @@ export function renderDesignAssistant() {
   });
 
   root.querySelectorAll('[data-prompt]').forEach(button=>button.addEventListener('click',()=>{input.value=button.dataset.prompt;input.focus();}));
-  root.querySelector('#assistantClear').addEventListener('click',()=>{stopVoice();history=[];pendingImage=null;attachment.hidden=true;attachment.textContent='';saveHistory();paint();});
+  root.querySelector('#assistantClear').addEventListener('click',()=>{if(processingQueue){alert('انتظر انتهاء الرد الحالي قبل فتح محادثة جديدة.');return;}stopVoice();const chat=createChat();activeChatId=chat.id;history=chat.messages;pendingImage=null;imageInput.value='';attachment.hidden=true;attachment.textContent='';saveHistory();paint();});
   imageInput.addEventListener('change',()=>{
     const file=imageInput.files?.[0]; if(!file) return;
     if(file.size>5*1024*1024){alert('حجم الصورة أكبر من 5 ميغابايت. اختر صورة أصغر.');imageInput.value='';return;}
@@ -232,31 +266,41 @@ export function renderDesignAssistant() {
     reader.onload=()=>{pendingImage={name:file.name,dataUrl:String(reader.result)};attachment.hidden=false;attachment.textContent='الصورة جاهزة للإرفاق: '+file.name+'  ×';attachment.onclick=()=>{pendingImage=null;imageInput.value='';attachment.hidden=true;};};
     reader.readAsDataURL(file);
   });
-  form.addEventListener('submit',async event=>{
+  async function processQueue() {
+    if (processingQueue || !sendQueue.length) return;
+    processingQueue = true;
+    while (sendQueue.length) {
+      const queued = sendQueue.shift();
+      const waiting=document.createElement('article');
+      waiting.className='assistant-message assistant-bot assistant-thinking';
+      waiting.textContent='مساعد التصميم يراجع فكرتك…';
+      messagesEl.append(waiting);messagesEl.scrollTop=messagesEl.scrollHeight;
+      sendButton.disabled=true;sendButton.textContent='يرد…';
+      try {
+        const {data,error}=await window.__maSupabase.auth.getSession();
+        if(error)throw error;
+        const token=data?.session?.access_token;
+        if(!token)throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
+        const snapshot=history.slice(0, history.findIndex((m,i)=>i===history.length-1 && m===queued.message)+1);
+        const response=await fetch('/api/design-assistant',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({messages:snapshot.slice(-18).map(({role,content})=>({role,content})),image:queued.image})});
+        const result=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(result.error||'تعذر الاتصال بمساعد التصميم.');
+        const answer=String(result.reply||'لم يصل رد واضح. حاول مرة أخرى.');
+        history.push({role:'assistant',content:answer});saveHistory();waiting.remove();addMessage('assistant',answer);
+      } catch(error) {
+        waiting.remove();
+        addMessage('assistant','صار في مشكلة: '+(error?.message||'حدث خطأ غير متوقع.')+'\nلم يتم حذف رسالتك؛ أعد الإرسال بعد معالجة المشكلة.');
+      }
+    }
+    processingQueue=false;sendButton.disabled=false;sendButton.textContent='إرسال ↑';input.focus();
+  }
+  form.addEventListener('submit',event=>{
     event.preventDefault();
     const text=input.value.trim(); if(!text&&!pendingImage)return;
     const userMessage={role:'user',content:text || 'حلل الصورة المرفقة واقترح تصميمها.',preview:pendingImage?.dataUrl||null};
-    history.push(userMessage); addMessage('user',userMessage.content,userMessage.preview);
-    const imageData=pendingImage?.dataUrl||null;
-    input.value='';input.disabled=true;sendButton.disabled=true;sendButton.textContent='يفكر…';
-    pendingImage=null;imageInput.value='';attachment.hidden=true;
-    const waiting=document.createElement('article');waiting.className='assistant-message assistant-bot assistant-thinking';waiting.textContent='مساعد التصميم يراجع فكرتك…';messagesEl.append(waiting);messagesEl.scrollTop=messagesEl.scrollHeight;
-    try {
-      const {data,error}=await window.__maSupabase.auth.getSession();
-      if(error)throw error;
-      const token=data?.session?.access_token;
-      if(!token)throw new Error('انتهت جلسة الدخول. سجّل الدخول مرة أخرى.');
-      const response=await fetch('/api/design-assistant',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},body:JSON.stringify({messages:history.slice(-MAX_HISTORY).map(({role,content})=>({role,content})),image:imageData})});
-      const result=await response.json().catch(()=>({}));
-      if(!response.ok)throw new Error(result.error||'تعذر الاتصال بمساعد التصميم.');
-      waiting.remove();
-      const answer=String(result.reply||'لم يصل رد واضح. حاول مرة أخرى.');
-      history.push({role:'assistant',content:answer});history=history.slice(-MAX_HISTORY);saveHistory();addMessage('assistant',answer);
-    } catch(error) {
-      waiting.remove();
-      const message=error?.message||'حدث خطأ غير متوقع.';
-      addMessage('assistant','صار في مشكلة: '+message+'\nلم يتم حذف رسالتك؛ أعد الإرسال بعد معالجة المشكلة.');
-      history.pop();
-    } finally {input.disabled=false;sendButton.disabled=false;sendButton.textContent='إرسال ↑';input.focus();}
-  });
+    history.push(userMessage); addMessage('user',userMessage.content,userMessage.preview);saveHistory();
+    sendQueue.push({message:userMessage,image:pendingImage?.dataUrl||null});
+    input.value='';pendingImage=null;imageInput.value='';attachment.hidden=true;
+    processQueue();
+  });;
 }
