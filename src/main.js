@@ -12,7 +12,7 @@ window.__maSupabase = supabase;
 const app = document.querySelector('#app');
 const navItems = [
   ['dashboard','لوحة المعلومات','⌂'],['designAssistant','مساعد التصميم الذكي','✧'],['customers','العملاء','♙'],['projects','المشاريع','▦'],
-['sketchup','SketchUp','◩'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
+['sketchup','SketchUp','◩'],['library','مكتبة الموديلات 3D','▣'],['surveys','قياسات المواقع','⌖'],['materials','المستودعات والمواد','▤'],
   ['cad','CAD الهندسي','▱'],['manufacturing','التصميم الهندسي والتصنيع','▧'],['orders','أوامر التصنيع','⚒'],['production','متابعة الإنتاج','◷'],['delivery','التسليم','✓'],
   ['reports','الحسابات والتقارير','▥']
 ];
@@ -152,7 +152,7 @@ function navigate(page) {
   }
   const routes = {
     dashboard: renderDashboard, designAssistant: renderDesignAssistant, cad: renderCadWorkspace, customers: renderCustomers, projects: renderProjects,
-    sketchup: renderSketchup, manufacturing: renderManufacturing, surveys: renderSurveys, materials: renderMaterials,
+    sketchup: renderSketchup, library: renderFurnitureLibrary, manufacturing: renderManufacturing, surveys: renderSurveys, materials: renderMaterials,
     orders: renderOrders, production: renderProduction, delivery: renderDelivery, reports: renderReports
   };
   routes[page]();
@@ -483,6 +483,17 @@ async function renderManufacturing() {
   if (currentPage === 'manufacturing') sceneCleanup = cleanup;
 }
 
+function renderFurnitureLibrary() {
+  setContent('مكتبة الموديلات 3D', `
+    <section class="section-card">
+      <div class="section-heading">
+        <div><h2>مكتبة التصاميم والنماذج ثلاثية الأبعاد</h2><p>نماذج مرخّصة CC0 ومفاهيم أصلية قابلة للتخصيص البصري.</p></div>
+        <a class="btn btn-primary" href="/library-3d.html" target="_blank" rel="noopener noreferrer">فتح المكتبة في نافذة مستقلة ↗</a>
+      </div>
+      <iframe title="مكتبة موديلات الأثاث ثلاثية الأبعاد" src="/library-3d.html" loading="lazy" style="width:100%;height:calc(100vh - 245px);min-height:720px;border:1px solid #29434c;border-radius:12px;background:#f5f8fb"></iframe>
+    </section>
+  `);
+}
 async function renderSketchup() {
   try {
     const [projects, surveys] = await Promise.all([
